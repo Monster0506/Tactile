@@ -292,6 +292,74 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle drawing start events
+  socket.on('drawing-start', (data) => {
+    try {
+      const sessionId = sessionManager.clientSessions.get(socket.id);
+      
+      if (!sessionId) {
+        socket.emit('error', { message: 'Not in a session' });
+        return;
+      }
+
+      sessionManager.handleDrawingStart(sessionId, data, socket.id);
+    } catch (error) {
+      console.error('Error handling drawing start:', error);
+      socket.emit('error', { message: 'Failed to handle drawing start' });
+    }
+  });
+
+  // Handle drawing move events
+  socket.on('drawing-move', (data) => {
+    try {
+      const sessionId = sessionManager.clientSessions.get(socket.id);
+      
+      if (!sessionId) {
+        socket.emit('error', { message: 'Not in a session' });
+        return;
+      }
+
+      sessionManager.handleDrawingMove(sessionId, data, socket.id);
+    } catch (error) {
+      console.error('Error handling drawing move:', error);
+      socket.emit('error', { message: 'Failed to handle drawing move' });
+    }
+  });
+
+  // Handle drawing end events
+  socket.on('drawing-end', (data) => {
+    try {
+      const sessionId = sessionManager.clientSessions.get(socket.id);
+      
+      if (!sessionId) {
+        socket.emit('error', { message: 'Not in a session' });
+        return;
+      }
+
+      sessionManager.handleDrawingEnd(sessionId, data, socket.id);
+    } catch (error) {
+      console.error('Error handling drawing end:', error);
+      socket.emit('error', { message: 'Failed to handle drawing end' });
+    }
+  });
+
+  // Handle drawing clear events
+  socket.on('drawing-clear', (data) => {
+    try {
+      const sessionId = sessionManager.clientSessions.get(socket.id);
+      
+      if (!sessionId) {
+        socket.emit('error', { message: 'Not in a session' });
+        return;
+      }
+
+      sessionManager.handleDrawingClear(sessionId, data, socket.id);
+    } catch (error) {
+      console.error('Error handling drawing clear:', error);
+      socket.emit('error', { message: 'Failed to handle drawing clear' });
+    }
+  });
+
   // Handle client disconnect
   socket.on('disconnect', () => {
     try {

@@ -218,6 +218,46 @@ class SessionManager {
   }
 
   /**
+   * Handle drawing start event
+   * @param {string} sessionId - Session ID
+   * @param {Object} data - Drawing start data
+   * @param {string} initiatorSocketId - Socket ID of client who initiated the drawing
+   */
+  handleDrawingStart(sessionId, data, initiatorSocketId) {
+    this.broadcastToSession(sessionId, 'drawing-start', data, initiatorSocketId);
+  }
+
+  /**
+   * Handle drawing move event
+   * @param {string} sessionId - Session ID
+   * @param {Object} data - Drawing move data
+   * @param {string} initiatorSocketId - Socket ID of client who initiated the drawing
+   */
+  handleDrawingMove(sessionId, data, initiatorSocketId) {
+    this.broadcastToSession(sessionId, 'drawing-move', data, initiatorSocketId);
+  }
+
+  /**
+   * Handle drawing end event
+   * @param {string} sessionId - Session ID
+   * @param {Object} data - Drawing end data
+   * @param {string} initiatorSocketId - Socket ID of client who initiated the drawing
+   */
+  handleDrawingEnd(sessionId, data, initiatorSocketId) {
+    this.broadcastToSession(sessionId, 'drawing-end', data, initiatorSocketId);
+  }
+
+  /**
+   * Handle drawing clear event
+   * @param {string} sessionId - Session ID
+   * @param {Object} data - Drawing clear data
+   * @param {string} initiatorSocketId - Socket ID of client who initiated the clear
+   */
+  handleDrawingClear(sessionId, data, initiatorSocketId) {
+    this.broadcastToSession(sessionId, 'drawing-clear', data, initiatorSocketId);
+  }
+
+  /**
    * Get session state for a client
    * @param {string} sessionId - Session ID
    * @returns {Object|null} Session state or null if session not found

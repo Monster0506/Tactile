@@ -240,76 +240,115 @@ class FileProcessor {
   }
 
   /**
-   * Convert Markdown to slide images with pagination
-   * @param {string} mdPath - Path to Markdown file
+   * Convert markdown file to slide images
+   * @param {string} mdPath - Path to markdown file
    * @param {string} outputDir - Output directory for slides
    * @returns {Promise<Array>} Array of slide objects
    */
   async convertMarkdown(mdPath, outputDir) {
+    const puppeteer = require('puppeteer');
+    
     try {
       // Read markdown content
-      const markdownContent = await fs.readFile(mdPath, 'utf-8');
+      const markdownContent = await fs.readFile(mdPath, 'utf8');
       
       // Parse and paginate markdown
       const pages = this.paginateMarkdown(markdownContent);
       
       const slides = [];
+      const md = new MarkdownIt({
+        html: true,
+        linkify: true,
+        typographer: true,
+        highlight: function (str, lang) {
+          const hljs = require('highlight.js');
+          if (lang && hljs.getLanguage(lang)) {
+            try {
+              return '<pre class="hljs"><code>' +
+                     hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+                     '</code></pre>';
+            } catch (__) {}
+          }
+          return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+        }
+      });
       
-      // Convert each page to a placeholder image
-      for (let i = 0; i < pages.length; i++) {
-        const slideNumber = i + 1;
-        const slideFilename = `slide-${slideNumber}.png`;
-        const slidePath = path.join(outputDir, slideFilename);
-        const thumbnailFilename = `thumb-${slideNumber}.png`;
-        const thumbnailPath = path.join(outputDir, thumbnailFilename);
-        
-        // Create a placeholder image with slide number for now
-        // In production, this would render the HTML to an image
-        const placeholderBuffer = await sharp({
-          create: {
+      // Launch browser for rendering
+      const browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      try {
+        for (let i = 0; i < pages.length; i++) {
+          const slideNumber = i + 1;
+          const slideId = `slide-${slideNumber}`;
+          const slideImagePath = path.join(outputDir, `${slideId}.png`);
+          const thumbImagePath = path.join(outputDir, `thumb-${slideNumber}.png`);
+          
+          // Convert markdown to HTML
+          const htmlContent = md.render(pages[i]);
+          
+          // Create full HTML page with styling
+          const fullHtml = this.createSlideHtml(htmlContent, slideNumber);
+          
+          // Create new page for each slide
+          const page = await browser.newPage();
+          
+          // Set viewport for slide dimensions (16:9 aspect ratio)
+          await page.setViewport({
             width: 1920,
             height: 1080,
-            channels: 4,
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
-          }
-        })
-        .composite([{
-          input: Buffer.from(`<svg width="1920" height="1080">
-            <rect width="1920" height="1080" fill="white"/>
-            <text x="960" y="540" font-family="Arial" font-size="48" text-anchor="middle" fill="black">
-              Markdown Slide ${slideNumber}
-            </text>
-          </svg>`),
-          top: 0,
-          left: 0
-        }])
-        .png()
-        .toBuffer();
-        
-        // Save the placeholder slide
-        await fs.writeFile(slidePath, placeholderBuffer);
-        
-        // Generate thumbnail
-        await sharp(slidePath)
-          .resize(300, 225, { 
-            fit: 'inside', 
-            withoutEnlargement: true,
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
-          })
-          .png({ quality: 90 })
-          .toFile(thumbnailPath);
-        
-        slides.push({
-          id: `slide-${slideNumber}`,
-          imageUrl: `/slides/${path.basename(outputDir)}/${slideFilename}`,
-          thumbnailUrl: `/slides/${path.basename(outputDir)}/${thumbnailFilename}`,
-          order: slideNumber
-        });
+            deviceScaleFactor: 1
+          });
+          
+          // Set content and wait for fonts/images to load
+          await page.setContent(fullHtml, {
+            waitUntil: ['networkidle0', 'domcontentloaded']
+          });
+          
+          // Take screenshot for main slide
+          await page.screenshot({
+            path: slideImagePath,
+            type: 'png',
+            fullPage: false
+          });
+          
+          // Create thumbnail (smaller version)
+          await page.setViewport({
+            width: 320,
+            height: 180,
+            deviceScaleFactor: 1
+          });
+          
+          await page.screenshot({
+            path: thumbImagePath,
+            type: 'png',
+            fullPage: false
+          });
+          
+          await page.close();
+          
+          // Add slide to results
+          slides.push({
+            id: slideId,
+            imageUrl: `/slides/${path.basename(outputDir)}/${slideId}.png`,
+            thumbnailUrl: `/slides/${path.basename(outputDir)}/thumb-${slideNumber}.png`,
+            order: slideNumber
+          });
+          
+          console.log(`Generated slide ${slideNumber}/${pages.length}`);
+        }
+      } finally {
+        await browser.close();
       }
       
+      console.log(`Successfully converted ${pages.length} markdown slides`);
       return slides;
+      
     } catch (error) {
-      throw new Error(`Markdown conversion failed: ${error.message}`);
+      console.error('Error converting markdown:', error);
+      throw new Error(`Failed to convert markdown: ${error.message}`);
     }
   }
 
@@ -353,130 +392,227 @@ class FileProcessor {
   }
 
   /**
-   * Create HTML template for markdown slide
-   * @param {string} markdownContent - Markdown content for the slide
-   * @returns {string} HTML content
+   * Create styled HTML for a slide
+   * @param {string} htmlContent - Rendered HTML from markdown
+   * @param {number} slideNumber - Slide number
+   * @returns {string} Complete HTML page
    */
-  createSlideHTML(markdownContent) {
-    const md = new MarkdownIt();
-    const htmlContent = md.render(markdownContent);
-    
+  createSlideHtml(htmlContent, slideNumber) {
     return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Slide</title>
-        <style>
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slide ${slideNumber}</title>
+    <style>
+        * {
             margin: 0;
-            padding: 60px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: white;
             color: #333;
-            line-height: 1.6;
             width: 1920px;
             height: 1080px;
-            box-sizing: border-box;
-            overflow: hidden;
+            margin: 0;
+            padding: 80px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-          }
-          
-          h1 {
-            font-size: 3.5em;
-            margin-bottom: 0.5em;
-            color: #2c3e50;
+            align-items: center;
+            overflow: hidden;
             text-align: center;
-          }
-          
-          h2 {
-            font-size: 2.5em;
-            margin-bottom: 0.5em;
-            color: #34495e;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 0.2em;
-          }
-          
-          h3 {
-            font-size: 2em;
-            margin-bottom: 0.5em;
-            color: #34495e;
-          }
-          
-          p {
-            font-size: 1.5em;
-            margin-bottom: 1em;
-          }
-          
-          ul, ol {
-            font-size: 1.4em;
-            margin-left: 2em;
-          }
-          
-          li {
-            margin-bottom: 0.5em;
-          }
-          
-          code {
-            background: #f8f9fa;
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-          }
-          
-          pre {
-            background: #f8f9fa;
-            padding: 1.5em;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-size: 1.2em;
-            border-left: 4px solid #3498db;
-          }
-          
-          blockquote {
-            border-left: 4px solid #3498db;
-            padding-left: 1.5em;
-            margin: 1.5em 0;
+            box-sizing: border-box;
+        }
+        
+        .slide-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 72px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 40px;
+            line-height: 1.2;
+            text-align: center;
+        }
+        
+        h2 {
+            font-size: 56px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 30px;
+            line-height: 1.3;
+        }
+        
+        h3 {
+            font-size: 44px;
+            font-weight: 500;
+            color: #667eea;
+            margin-bottom: 25px;
+            line-height: 1.3;
+        }
+        
+        h4, h5, h6 {
+            font-size: 36px;
+            font-weight: 500;
+            color: #718096;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        
+        p {
+            font-size: 32px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            color: #4a5568;
+            text-align: center;
+        }
+        
+        ul, ol {
+            font-size: 32px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            padding-left: 50px;
+            color: #4a5568;
+            text-align: left;
+            display: inline-block;
+        }
+        
+        li {
+            margin-bottom: 15px;
+        }
+        
+        blockquote {
+            border-left: 8px solid #667eea;
+            background: #f7fafc;
+            padding: 30px 40px;
+            margin: 30px 0;
             font-style: italic;
-            color: #555;
-          }
-          
-          img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 1em auto;
-          }
-          
-          table {
+            font-size: 36px;
+            color: #2d3748;
+            border-radius: 0 15px 15px 0;
+        }
+        
+        code {
+            background: #f1f5f9;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 28px;
+            color: #e53e3e;
+        }
+        
+        pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 40px;
+            border-radius: 15px;
+            margin: 30px 0;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 24px;
+            line-height: 1.5;
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: inherit;
+        }
+        
+        /* Syntax highlighting for code blocks */
+        .hljs-keyword { color: #c792ea; }
+        .hljs-string { color: #c3e88d; }
+        .hljs-number { color: #f78c6c; }
+        .hljs-comment { color: #546e7a; font-style: italic; }
+        .hljs-function { color: #82aaff; }
+        .hljs-variable { color: #eeffff; }
+        .hljs-built_in { color: #ffcb6b; }
+        .hljs-title { color: #82aaff; }
+        .hljs-params { color: #f07178; }
+        .hljs-attr { color: #ffcb6b; }
+        .hljs-tag { color: #f07178; }
+        .hljs-name { color: #f07178; }
+        .hljs-selector-tag { color: #f07178; }
+        .hljs-selector-class { color: #ffcb6b; }
+        .hljs-selector-id { color: #82aaff; }
+        
+        table {
             width: 100%;
             border-collapse: collapse;
-            margin: 1em 0;
-            font-size: 1.3em;
-          }
-          
-          th, td {
-            border: 1px solid #ddd;
-            padding: 0.8em;
+            margin: 30px 0;
+            font-size: 28px;
+        }
+        
+        th, td {
+            border: 2px solid #e2e8f0;
+            padding: 20px;
             text-align: left;
-          }
-          
-          th {
-            background: #f8f9fa;
-            font-weight: bold;
-          }
-        </style>
-      </head>
-      <body>
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+        
+        a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 15px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        hr {
+            border: none;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            margin: 50px 0;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
         ${htmlContent}
-      </body>
-      </html>
-    `;
+    </div>
+</body>
+</html>`;
   }
+
+
 
   /**
    * Get supported file formats
