@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const FileProcessor = require('./src/services/FileProcessor');
+const StorageService = require('./src/services/StorageService');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,8 +18,12 @@ const io = socketIo(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// Initialize FileProcessor
+// Initialize services
 const fileProcessor = new FileProcessor();
+const storageService = new StorageService();
+
+// Initialize storage service
+storageService.initialize().catch(console.error);
 
 // Middleware
 app.use(cors());
@@ -63,6 +68,29 @@ app.get('/presentation/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'presentation.html'));
 });
 
+// API endpoint to get presentation data
+app.get('/api/presentation/:id', async (req, res) => {
+  try {
+    const presentationId = req.params.id;
+    const presentation = await storageService.getPresentation(presentationId);
+    
+    if (!presentation) {
+      return res.status(404).json({ error: 'Presentation not found' });
+    }
+    
+    res.json({
+      id: presentation.id,
+      title: presentation.title,
+      slides: presentation.slides,
+      totalSlides: presentation.getTotalSlides(),
+      createdAt: presentation.createdAt
+    });
+  } catch (error) {
+    console.error('Error fetching presentation:', error);
+    res.status(500).json({ error: 'Failed to fetch presentation' });
+  }
+});
+
 // File upload endpoint
 app.post('/upload', upload.single('presentation'), async (req, res) => {
   try {
@@ -83,14 +111,26 @@ app.post('/upload', upload.single('presentation'), async (req, res) => {
     // Process the file
     const result = await fileProcessor.processFile(req.file.path, req.file.originalname);
     
+    // Create Presentation object from FileProcessor result
+    const Presentation = require('./src/models/Presentation');
+    const presentation = new Presentation({
+      id: result.presentationId,
+      title: result.title,
+      slides: result.slides,
+      createdAt: new Date(result.createdAt)
+    });
+    
+    // Save presentation using StorageService
+    const savedPresentation = await storageService.savePresentation(presentation);
+    
     res.json({
       success: true,
-      presentationId: result.presentationId,
-      title: result.title,
-      totalSlides: result.totalSlides,
-      slides: result.slides,
-      url: `/presentation/${result.presentationId}`,
-      createdAt: result.createdAt
+      presentationId: savedPresentation.id,
+      title: savedPresentation.title,
+      totalSlides: savedPresentation.getTotalSlides(),
+      slides: savedPresentation.slides,
+      url: `/presentation/${savedPresentation.id}`,
+      createdAt: savedPresentation.createdAt
     });
   } catch (error) {
     console.error('File processing error:', error);
