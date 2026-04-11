@@ -8,17 +8,26 @@
     "dev": "nodemon server.js",
     "test": "jest"
   },
-  "keywords": ["presentation", "viewer", "real-time", "websocket"],
+  "keywords": [
+    "presentation",
+    "viewer",
+    "real-time",
+    "websocket"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "mime-types": "^3.0.2",
     "multer": "^2.1.1",
     "path": "^0.12.7",
+    "pdf-poppler": "^0.2.3",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14"
   }

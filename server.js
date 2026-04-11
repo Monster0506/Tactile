@@ -4,6 +4,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
+const FileProcessor = require('./src/services/FileProcessor');
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +16,9 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Initialize FileProcessor
+const fileProcessor = new FileProcessor();
 
 // Middleware
 app.use(cors());
@@ -60,21 +64,36 @@ app.get('/presentation/:id', (req, res) => {
 });
 
 // File upload endpoint
-app.post('/upload', upload.single('presentation'), (req, res) => {
+app.post('/upload', upload.single('presentation'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const presentationId = Date.now().toString();
+    // Validate file using FileProcessor
+    const isValid = await fileProcessor.validateFile(req.file.path, req.file.originalname);
+    if (!isValid) {
+      return res.status(400).json({ 
+        error: 'Invalid file format or size',
+        supportedFormats: fileProcessor.getSupportedFormats(),
+        maxSize: `${fileProcessor.getMaxFileSize() / (1024 * 1024)}MB`
+      });
+    }
+
+    // Process the file
+    const result = await fileProcessor.processFile(req.file.path, req.file.originalname);
     
     res.json({
       success: true,
-      presentationId: presentationId,
-      filename: req.file.originalname,
-      url: `/presentation/${presentationId}`
+      presentationId: result.presentationId,
+      title: result.title,
+      totalSlides: result.totalSlides,
+      slides: result.slides,
+      url: `/presentation/${result.presentationId}`,
+      createdAt: result.createdAt
     });
   } catch (error) {
+    console.error('File processing error:', error);
     res.status(500).json({ error: error.message });
   }
 });
