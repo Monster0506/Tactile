@@ -91,22 +91,48 @@ describe('FileProcessor Integration Tests', () => {
       ).rejects.toThrow('Unsupported file format');
     });
 
-    test('should throw appropriate error for PowerPoint files', async () => {
+    test('should successfully process PowerPoint files', async () => {
       const testFile = path.join(testDir, 'presentation.pptx');
       await fs.writeFile(testFile, 'test content');
 
-      await expect(
-        fileProcessor.processFile(testFile, 'presentation.pptx')
-      ).rejects.toThrow('PowerPoint conversion not yet implemented');
+      const result = await fileProcessor.processFile(testFile, 'presentation.pptx');
+      
+      expect(result).toMatchObject({
+        presentationId: expect.any(String),
+        title: 'presentation',
+        slides: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'slide-1',
+            imageUrl: expect.stringContaining('/slides/'),
+            thumbnailUrl: expect.stringContaining('/slides/'),
+            order: 1
+          })
+        ]),
+        totalSlides: 1,
+        createdAt: expect.any(String)
+      });
     });
 
-    test('should throw appropriate error for Markdown files', async () => {
+    test('should successfully process Markdown files', async () => {
       const testFile = path.join(testDir, 'presentation.md');
-      await fs.writeFile(testFile, 'test content');
+      await fs.writeFile(testFile, '# Slide 1\nContent 1\n\n---\n\n# Slide 2\nContent 2');
 
-      await expect(
-        fileProcessor.processFile(testFile, 'presentation.md')
-      ).rejects.toThrow('Markdown conversion not yet implemented');
+      const result = await fileProcessor.processFile(testFile, 'presentation.md');
+      
+      expect(result).toMatchObject({
+        presentationId: expect.any(String),
+        title: 'presentation',
+        slides: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'slide-1',
+            imageUrl: expect.stringContaining('/slides/'),
+            thumbnailUrl: expect.stringContaining('/slides/'),
+            order: 1
+          })
+        ]),
+        totalSlides: 2,
+        createdAt: expect.any(String)
+      });
     });
   });
 
