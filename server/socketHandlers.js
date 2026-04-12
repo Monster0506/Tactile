@@ -125,6 +125,21 @@ function attachSocketHandlers(io, deps) {
       }
     });
 
+    socket.on('laser-trail-point', (data) => {
+      try {
+        const sessionId = requireSession(socket);
+        if (!sessionId) return;
+        const x = data?.x;
+        const y = data?.y;
+        if (typeof x !== 'number' || typeof y !== 'number') return;
+        const t = typeof data?.t === 'number' ? data.t : Date.now();
+        sessionManager.handleLaserTrailPoint(sessionId, { x, y, t }, socket.id);
+      } catch (error) {
+        console.error('Error relaying laser trail point:', error);
+        socket.emit('error', { message: 'Failed to relay laser trail' });
+      }
+    });
+
     socket.on('drawing-data', (data) => {
       try {
         const sessionId = requireSession(socket);

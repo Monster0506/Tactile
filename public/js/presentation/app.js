@@ -34,6 +34,9 @@ export function presentationApp() {
     this.startConnectionHealthCheck();
 
     this.$nextTick(() => {
+      if (typeof this.setupLaserCanvas === 'function') {
+        this.setupLaserCanvas();
+      }
       this.initializeDrawing();
     });
   };

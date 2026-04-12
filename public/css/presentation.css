@@ -4,6 +4,10 @@
     box-sizing: border-box;
 }
 
+:root {
+    --presentation-slide-fade: 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #000;
@@ -28,6 +32,7 @@ body {
 }
 
 #slideDisplay {
+    position: relative;
     width: 100%;
     height: 100%;
     display: flex;
@@ -42,11 +47,15 @@ body {
     cursor: pointer;
 }
 
-#slideDisplay img {
+#slideDisplay img,
+#mobileSlidePreview {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    transition: opacity 0.3s ease;
+    transition: opacity var(--presentation-slide-fade);
+}
+
+#slideDisplay img {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
@@ -172,6 +181,20 @@ body:fullscreen #navigationHints:hover {
     opacity: 0.8;
 }
 
+/* Laser pointer trail (below ink while annotating) */
+.laser-trail-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 105;
+    border: none;
+    outline: none;
+    background: transparent;
+}
+
 /* Drawing Canvas */
 .drawing-canvas {
     position: absolute;
@@ -190,6 +213,10 @@ body:fullscreen #navigationHints:hover {
 
 .drawing-canvas.eraser-mode {
     cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="red" stroke-width="2"/></svg>') 10 10, auto;
+}
+
+#slideDisplay .drawing-canvas.drawing-mode {
+    z-index: 110;
 }
 
 /* Mobile Drawing Canvas */
@@ -605,6 +632,7 @@ body:not(.mobile-device) #navigationHints {
 }
 
 .mobile-slide-preview {
+    position: relative;
     flex: 1;
     display: flex;
     align-items: center;
@@ -616,10 +644,18 @@ body:not(.mobile-device) #navigationHints {
     min-height: 200px;
 }
 
+.mobile-slide-preview .mobile-drawing-canvas.drawing-mode {
+    z-index: 110;
+}
+
+/* No horizontal/vertical page gestures while capturing pointer or drawing */
+.mobile-slide-preview.interaction-lock {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 #mobileSlidePreview {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
@@ -669,8 +705,7 @@ body:not(.mobile-device) #navigationHints {
     align-items: center;
 }
 
-.play-pause-btn,
-.laser-btn {
+.control-round-btn {
     width: 70px;
     height: 70px;
     border: none;
@@ -686,19 +721,17 @@ body:not(.mobile-device) #navigationHints {
     -webkit-backdrop-filter: blur(10px);
 }
 
-.play-pause-btn:active,
-.laser-btn:active {
+.control-round-btn:active {
     transform: scale(0.95);
     background: rgba(255, 255, 255, 0.3);
 }
 
-.laser-btn.active {
+.control-round-btn.active {
     background: rgba(255, 0, 0, 0.3);
     box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
 }
 
-.play-pause-btn svg,
-.laser-btn svg {
+.control-round-btn svg {
     width: 32px;
     height: 32px;
 }
@@ -826,8 +859,7 @@ body:not(.mobile-device) #navigationHints {
         height: 50px;
     }
     
-    .play-pause-btn,
-    .laser-btn {
+    .control-round-btn {
         width: 60px;
         height: 60px;
     }
@@ -837,8 +869,7 @@ body:not(.mobile-device) #navigationHints {
         height: 24px;
     }
     
-    .play-pause-btn svg,
-    .laser-btn svg {
+    .control-round-btn svg {
         width: 28px;
         height: 28px;
     }

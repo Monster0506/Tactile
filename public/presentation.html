@@ -15,7 +15,9 @@
     <div id="presentationContainer">
         <!-- Desktop Slide Display -->
         <div x-show="!isMobile" id="slideDisplay" @click="handleSlideClick"
-             @mouseenter="showDrawingToolbar" @mouseleave="hideDrawingToolbar">
+             @mouseenter="showDrawingToolbar" @mouseleave="hideDrawingToolbar"
+             @mousemove="onLaserPointerMove($event)"
+             @touchmove.prevent="onLaserTouchMove($event)">
             <img x-show="currentSlideImage && !slideError" :src="currentSlideImage"
                 :alt="`Slide ${displaySlideNumber}`"
                 @load="slideError = false" @error="handleSlideError">
@@ -30,6 +32,7 @@
                 <div class="error-url" x-text="currentSlideImage"></div>
             </div>
 
+            <canvas x-ref="laserTrailCanvas" class="laser-trail-canvas"></canvas>
             <canvas x-ref="drawingCanvas" class="drawing-canvas" :class="{ 
                     'drawing-mode': drawing.isDrawingMode,
                     'eraser-mode': drawing.currentTool === 'eraser'
@@ -125,10 +128,13 @@
                 </div>
             </div>
 
-            <div class="mobile-slide-preview" @touchstart="handleMobileTouchStart" @touchend="handleMobileTouchEnd">
+            <div class="mobile-slide-preview" @touchstart="handleMobileTouchStart" @touchend="handleMobileTouchEnd"
+                @touchmove.prevent="onLaserTouchMove($event)"
+                :class="{ 'interaction-lock': isLaserActive || drawing.isDrawingMode }">
                 <img x-show="currentSlideImage" :src="currentSlideImage"
                     :alt="`Slide ${displaySlideNumber}`"
                     id="mobileSlidePreview">
+                <canvas x-ref="mobileLaserTrailCanvas" class="laser-trail-canvas mobile-laser-trail"></canvas>
                 <canvas x-ref="mobileDrawingCanvas" class="mobile-drawing-canvas" :class="{ 
                     'drawing-mode': drawing.isDrawingMode,
                     'eraser-mode': drawing.currentTool === 'eraser'
@@ -144,14 +150,14 @@
                 </button>
 
                 <div class="control-center">
-                    <button @click="provideTactileFeedback" class="play-pause-btn" aria-label="Play/Pause">
+                    <button @click="provideTactileFeedback" class="control-round-btn" aria-label="Play/Pause">
                         <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M8 5v14l11-7z" />
                         </svg>
                     </button>
 
-                    <button @click="toggleLaserPointer" :class="{ 'active': isLaserActive }" class="laser-btn"
-                        aria-label="Laser pointer">
+                    <button @click="toggleLaserPointer" :class="{ 'active': isLaserActive }" class="control-round-btn"
+                        aria-label="Pointer trail">
                         <svg viewBox="0 0 24 24" fill="currentColor">
                             <circle cx="12" cy="12" r="3" />
                             <path

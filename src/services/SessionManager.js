@@ -216,6 +216,16 @@ class SessionManager {
   }
 
   /**
+   * Relay a normalized laser trail sample to other clients (sender excluded).
+   * @param {string} sessionId
+   * @param {{ x: number, y: number, t: number }} data
+   * @param {string} initiatorSocketId
+   */
+  handleLaserTrailPoint(sessionId, data, initiatorSocketId) {
+    this.broadcastToSession(sessionId, 'laser-trail-point', data, initiatorSocketId);
+  }
+
+  /**
    * Broadcast drawing data to all clients in a session
    * @param {string} sessionId - Session ID
    * @param {Object} drawingData - Drawing stroke data

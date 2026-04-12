@@ -22,7 +22,25 @@ export function createPresentationState() {
     touchStartX: 0,
     touchStartY: 0,
     touchStartTime: 0,
+    /** Set true in handleMobileTouchStart when swipe tracking is allowed (laser + drawing off) */
+    mobileSwipeArmed: false,
 
-    drawing: createDrawingState()
+    drawing: createDrawingState(),
+
+    /** Laser trail canvas + render loop (see laserUi.js) */
+    laser: {
+      lastEmit: 0,
+      rafId: null,
+      idleFrames: 0,
+      targetNx: 0.5,
+      targetNy: 0.5,
+      displayNx: 0.5,
+      displayNy: 0.5,
+      prevDrawNx: null,
+      prevDrawNy: null,
+      sampleQueue: [],
+      /** True when smoothing remote trail (other clients); local uses sample queue */
+      remoteSmoothing: false
+    }
   };
 }

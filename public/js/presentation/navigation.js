@@ -112,6 +112,9 @@ export const navigation = {
   displaySlide(slideIndex) {
     this.currentSlide = slideIndex;
     this.slideError = false;
+    if (typeof this.clearLaserTrail === 'function') {
+      this.clearLaserTrail();
+    }
     setTimeout(() => this.redrawCurrentSlide(), 100);
   },
 

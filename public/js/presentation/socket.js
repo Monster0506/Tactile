@@ -59,6 +59,10 @@ export const socketApi = {
       this.updateLaserPointer(data.x, data.y, data.active);
     });
 
+    this.socket.on('laser-trail-point', (data) => {
+      this.onRemoteLaserTrailPoint(data);
+    });
+
     this.socket.on('drawing-start', (data) => {
       this.handleRemoteDrawingStart(data);
     });
