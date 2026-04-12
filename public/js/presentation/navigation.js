@@ -1,3 +1,6 @@
+import { resolveSlideUrl } from './slideResolve.js';
+import { EMPTY_IMG_DATA_URL } from './constants.js';
+
 export const navigation = {
   setupKeyboardNavigation() {
     document.addEventListener('keydown', (e) => {
@@ -112,6 +115,33 @@ export const navigation = {
   displaySlide(slideIndex) {
     this.currentSlide = slideIndex;
     this.slideError = false;
+
+    const url = resolveSlideUrl(this, slideIndex);
+
+    if (!this.slideLayersReady) {
+      this.slideLayerUrl0 = url;
+      this.slideLayerUrl1 = EMPTY_IMG_DATA_URL;
+      this.slideActiveLayer = 0;
+      this.slideLayersReady = true;
+    } else {
+      const active = this.slideActiveLayer;
+      const hidden = 1 - active;
+      const activeUrl = active === 0 ? this.slideLayerUrl0 : this.slideLayerUrl1;
+      const hiddenUrl = hidden === 0 ? this.slideLayerUrl0 : this.slideLayerUrl1;
+
+      if (url && url === activeUrl) {
+        // Already showing this asset
+      } else if (url && url === hiddenUrl && url !== EMPTY_IMG_DATA_URL) {
+        this.slideActiveLayer = hidden;
+      } else if (url) {
+        if (hidden === 0) {
+          this.slideLayerUrl0 = url;
+        } else {
+          this.slideLayerUrl1 = url;
+        }
+      }
+    }
+
     if (typeof this.clearLaserTrail === 'function') {
       this.clearLaserTrail();
     }
@@ -126,6 +156,24 @@ export const navigation = {
       }
       this.redrawCurrentSlide();
     }, 100);
+  },
+
+  onSlideLayerLoad(layerIdx) {
+    const expected = resolveSlideUrl(this, this.currentSlide);
+    const layerUrl = layerIdx === 0 ? this.slideLayerUrl0 : this.slideLayerUrl1;
+    if (!expected || layerUrl !== expected) return;
+    this.slideActiveLayer = layerIdx;
+    if (this.isMobile) {
+      this.$nextTick(() => {
+        if (typeof this.onMobileSlideImageLoad === 'function') {
+          this.onMobileSlideImageLoad();
+        }
+      });
+    }
+  },
+
+  handleSlideLayerError() {
+    this.slideError = true;
   },
 
   goToSlide(newSlide) {

@@ -23,3 +23,7 @@ export const LASER_MIN_SEGMENT_NORM = 0.00012;
 
 /** Idle frames before stopping the animation loop (trail has faded via destination-out) */
 export const LASER_IDLE_FRAMES_STOP = 140;
+
+/** 1×1 transparent GIF — placeholder `src` for the inactive slide layer before it has a real URL */
+export const EMPTY_IMG_DATA_URL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';

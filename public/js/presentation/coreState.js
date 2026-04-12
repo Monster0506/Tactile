@@ -1,4 +1,5 @@
 import { createDrawingState } from './state.js';
+import { EMPTY_IMG_DATA_URL } from './constants.js';
 
 /**
  * Scalar and nested state for the presentation Alpine component.
@@ -13,6 +14,12 @@ export function createPresentationState() {
     slides: [],
     presentationData: null,
     slideError: false,
+
+    /** Dual-layer URLs for crossfade; inactive slot uses a transparent data URL until needed */
+    slideLayerUrl0: '',
+    slideLayerUrl1: EMPTY_IMG_DATA_URL,
+    slideActiveLayer: 0,
+    slideLayersReady: false,
     isConnected: false,
     clientCount: 1,
     isMobile: false,

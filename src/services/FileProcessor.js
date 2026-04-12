@@ -5,6 +5,24 @@ const sharp = require('sharp');
 const mime = require('mime-types');
 const MarkdownIt = require('markdown-it');
 
+/** pdf-poppler: max width in px of the rasterized page (longer side scales to this) */
+const PDF_RASTER_MAX_WIDTH_PX = 6144;
+
+/** Logical 16:9 slide (CSS px) for markdown HTML + Puppeteer layout */
+const SLIDE_VIEWPORT_WIDTH = 1920;
+const SLIDE_VIEWPORT_HEIGHT = 1080;
+
+/**
+ * Puppeteer screenshots at this device scale → physical pixels = logical × factor
+ * (e.g. 1920×1080 @4 = 7680×4320 PNG). Higher = sharper bitmap; does not change CSS font sizes.
+ */
+const SLIDE_SCREENSHOT_DEVICE_SCALE = 4;
+
+/** Thumbnail target (16:9); rasterized at SLIDE_THUMB_DEVICE_SCALE for crisp UI */
+const SLIDE_THUMB_WIDTH = 960;
+const SLIDE_THUMB_HEIGHT = 540;
+const SLIDE_THUMB_DEVICE_SCALE = 4;
+
 class FileProcessor {
   constructor() {
     this.supportedFormats = ['.pdf', '.ppt', '.pptx', '.md'];
@@ -142,7 +160,7 @@ class FileProcessor {
         out_dir: outputDir,
         out_prefix: 'slide',
         page: null, // Convert all pages
-        scale: 2048 // High resolution for better quality
+        scale: PDF_RASTER_MAX_WIDTH_PX
       };
 
       // Convert PDF to images
@@ -160,12 +178,12 @@ class FileProcessor {
 
         // Generate high-quality thumbnail with proper aspect ratio
         await sharp(slidePath)
-          .resize(300, 225, { 
-            fit: 'inside', 
+          .resize(SLIDE_THUMB_WIDTH, SLIDE_THUMB_HEIGHT, {
+            fit: 'inside',
             withoutEnlargement: true,
             background: { r: 255, g: 255, b: 255, alpha: 1 }
           })
-          .png({ quality: 90 })
+          .png({ compressionLevel: 9 })
           .toFile(thumbnailPath);
 
         slides.push({
@@ -204,13 +222,13 @@ class FileProcessor {
       // Create a placeholder image using Sharp
       const placeholderBuffer = await sharp({
         create: {
-          width: 1920,
-          height: 1080,
+          width: SLIDE_VIEWPORT_WIDTH * SLIDE_SCREENSHOT_DEVICE_SCALE,
+          height: SLIDE_VIEWPORT_HEIGHT * SLIDE_SCREENSHOT_DEVICE_SCALE,
           channels: 4,
           background: { r: 255, g: 255, b: 255, alpha: 1 }
         }
       })
-      .png()
+      .png({ compressionLevel: 9 })
       .toBuffer();
       
       // Save the placeholder slide
@@ -218,12 +236,12 @@ class FileProcessor {
       
       // Generate thumbnail
       await sharp(slidePath)
-        .resize(300, 225, { 
-          fit: 'inside', 
+        .resize(SLIDE_THUMB_WIDTH, SLIDE_THUMB_HEIGHT, {
+          fit: 'inside',
           withoutEnlargement: true,
           background: { r: 255, g: 255, b: 255, alpha: 1 }
         })
-        .png({ quality: 90 })
+        .png({ compressionLevel: 9 })
         .toFile(thumbnailPath);
       
       slides.push({
@@ -297,9 +315,9 @@ class FileProcessor {
           
           // Set viewport for slide dimensions (16:9 aspect ratio)
           await page.setViewport({
-            width: 1920,
-            height: 1080,
-            deviceScaleFactor: 1
+            width: SLIDE_VIEWPORT_WIDTH,
+            height: SLIDE_VIEWPORT_HEIGHT,
+            deviceScaleFactor: SLIDE_SCREENSHOT_DEVICE_SCALE
           });
           
           // Set content and wait for fonts/images to load
@@ -313,14 +331,13 @@ class FileProcessor {
             type: 'png',
             fullPage: false
           });
-          
-          // Create thumbnail (smaller version)
+
           await page.setViewport({
-            width: 320,
-            height: 180,
-            deviceScaleFactor: 1
+            width: SLIDE_THUMB_WIDTH,
+            height: SLIDE_THUMB_HEIGHT,
+            deviceScaleFactor: SLIDE_THUMB_DEVICE_SCALE
           });
-          
+
           await page.screenshot({
             path: thumbImagePath,
             type: 'png',
@@ -441,7 +458,7 @@ class FileProcessor {
         }
         
         h1 {
-            font-size: 72px;
+            font-size: 144px;
             font-weight: 700;
             color: #2d3748;
             margin-bottom: 40px;
@@ -450,7 +467,7 @@ class FileProcessor {
         }
         
         h2 {
-            font-size: 56px;
+            font-size: 112px;
             font-weight: 600;
             color: #4a5568;
             margin-bottom: 30px;
@@ -458,7 +475,7 @@ class FileProcessor {
         }
         
         h3 {
-            font-size: 44px;
+            font-size: 88px;
             font-weight: 500;
             color: #667eea;
             margin-bottom: 25px;
@@ -466,7 +483,7 @@ class FileProcessor {
         }
         
         h4, h5, h6 {
-            font-size: 36px;
+            font-size: 72px;
             font-weight: 500;
             color: #718096;
             margin-bottom: 20px;
@@ -474,7 +491,7 @@ class FileProcessor {
         }
         
         p {
-            font-size: 32px;
+            font-size: 64px;
             line-height: 1.6;
             margin-bottom: 25px;
             color: #4a5568;
@@ -482,7 +499,7 @@ class FileProcessor {
         }
         
         ul, ol {
-            font-size: 32px;
+            font-size: 64px;
             line-height: 1.8;
             margin-bottom: 30px;
             padding-left: 50px;
@@ -501,7 +518,7 @@ class FileProcessor {
             padding: 30px 40px;
             margin: 30px 0;
             font-style: italic;
-            font-size: 36px;
+            font-size: 72px;
             color: #2d3748;
             border-radius: 0 15px 15px 0;
         }
@@ -511,7 +528,7 @@ class FileProcessor {
             padding: 4px 12px;
             border-radius: 6px;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 28px;
+            font-size: 56px;
             color: #e53e3e;
         }
         
@@ -523,7 +540,7 @@ class FileProcessor {
             margin: 30px 0;
             overflow-x: auto;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 24px;
+            font-size: 48px;
             line-height: 1.5;
             text-align: left;
             width: 100%;
@@ -558,7 +575,7 @@ class FileProcessor {
             width: 100%;
             border-collapse: collapse;
             margin: 30px 0;
-            font-size: 28px;
+            font-size: 56px;
         }
         
         th, td {

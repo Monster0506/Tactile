@@ -220,7 +220,7 @@ describe('FileProcessor', () => {
                 out_dir: '/output/dir',
                 out_prefix: 'slide',
                 page: null,
-                scale: 2048
+                scale: 6144
             });
 
             expect(slides).toHaveLength(3);
@@ -234,7 +234,7 @@ describe('FileProcessor', () => {
             // Verify thumbnail generation with proper settings
             expect(mockSharp).toHaveBeenCalledTimes(3);
             const mockSharpInstance = mockSharp();
-            expect(mockSharpInstance.resize).toHaveBeenCalledWith(300, 225, {
+            expect(mockSharpInstance.resize).toHaveBeenCalledWith(960, 540, {
                 fit: 'inside',
                 withoutEnlargement: true,
                 background: { r: 255, g: 255, b: 255, alpha: 1 }

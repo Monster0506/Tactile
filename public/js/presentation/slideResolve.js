@@ -1,23 +1,24 @@
 /**
  * @param {object} app - Alpine component (presentation viewer)
+ * @param {number} slideIndex
  * @returns {string}
  */
-export function getCurrentSlideImage(app) {
-  const slideIndex = typeof app.currentSlide === 'number' && app.currentSlide >= 0 ? app.currentSlide : 0;
+export function resolveSlideUrl(app, slideIndex) {
+  const idx = typeof slideIndex === 'number' && slideIndex >= 0 ? slideIndex : 0;
 
   if (!app.slides || !Array.isArray(app.slides) || app.slides.length === 0) {
     console.log('No slides available, slides:', app.slides);
     return '';
   }
 
-  if (slideIndex >= app.slides.length) {
-    console.log('Slide index out of bounds:', slideIndex, 'Total slides:', app.slides.length);
+  if (idx >= app.slides.length) {
+    console.log('Slide index out of bounds:', idx, 'Total slides:', app.slides.length);
     return '';
   }
 
-  const slide = app.slides[slideIndex];
+  const slide = app.slides[idx];
   if (!slide) {
-    console.log('No slide data for index:', slideIndex, 'Total slides:', app.slides.length);
+    console.log('No slide data for index:', idx, 'Total slides:', app.slides.length);
     return '';
   }
 
@@ -43,4 +44,13 @@ export function getCurrentSlideImage(app) {
 
   console.log('Resolved image URL:', imageUrl);
   return imageUrl;
+}
+
+/**
+ * @param {object} app - Alpine component (presentation viewer)
+ * @returns {string}
+ */
+export function getCurrentSlideImage(app) {
+  const slideIndex = typeof app.currentSlide === 'number' && app.currentSlide >= 0 ? app.currentSlide : 0;
+  return resolveSlideUrl(app, slideIndex);
 }

@@ -151,6 +151,7 @@ export const drawing = {
   },
 
   toggleDrawingMode() {
+    if (!this.isMobile) return;
     this.drawing.isDrawingMode = !this.drawing.isDrawingMode;
     this.drawing.toolbarVisible = this.drawing.isDrawingMode;
 

@@ -13,14 +13,19 @@
 
 <body x-data="presentationApp()" x-init="init()" :class="{ 'mobile-device': isMobile }">
     <div id="presentationContainer">
-        <!-- Desktop Slide Display -->
-        <div x-show="!isMobile" id="slideDisplay" @click="handleSlideClick"
-             @mouseenter="showDrawingToolbar" @mouseleave="hideDrawingToolbar"
+        <!-- Desktop Slide Display (x-if avoids duplicating slide image loads vs mobile) -->
+        <template x-if="!isMobile">
+        <div id="slideDisplay" @click="handleSlideClick"
              @mousemove="onLaserPointerMove($event)"
              @touchmove.prevent="onLaserTouchMove($event)">
-            <img x-show="currentSlideImage && !slideError" :src="currentSlideImage"
-                :alt="`Slide ${displaySlideNumber}`"
-                @load="slideError = false" @error="handleSlideError">
+            <div x-show="currentSlideImage && !slideError" class="slide-image-stack">
+                <img class="slide-layer" :class="{ 'slide-layer-visible': slideActiveLayer === 0 }"
+                    :src="slideLayerUrl0" :alt="`Slide ${displaySlideNumber}`"
+                    @load="slideError = false; onSlideLayerLoad(0)" @error="handleSlideLayerError">
+                <img class="slide-layer" :class="{ 'slide-layer-visible': slideActiveLayer === 1 }"
+                    :src="slideLayerUrl1" :alt="`Slide ${displaySlideNumber}`"
+                    @load="slideError = false; onSlideLayerLoad(1)" @error="handleSlideLayerError">
+            </div>
 
             <!-- Error display for failed slides -->
             <div x-show="slideError" class="slide-error">
@@ -38,69 +43,7 @@
                     'eraser-mode': drawing.currentTool === 'eraser'
                 }"></canvas>
         </div>
-
-        <!-- Desktop Drawing Toolbar -->
-        <div x-show="!isMobile" class="drawing-toolbar" :class="{ 
-                'visible': drawing.toolbarVisible,
-                'drawing-active': drawing.isDrawingMode 
-            }">
-            <button @click="toggleDrawingMode" class="toolbar-btn toggle-btn"
-                :class="{ 'active': drawing.isDrawingMode }" title="Toggle Drawing Mode">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                </svg>
-            </button>
-
-            <div class="toolbar-separator"></div>
-
-            <button @click="setDrawingTool('pen')" class="toolbar-btn tool-btn"
-                :class="{ 'active': drawing.currentTool === 'pen' }" title="Pen Tool">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                </svg>
-            </button>
-
-            <button @click="setDrawingTool('eraser')" class="toolbar-btn tool-btn"
-                :class="{ 'active': drawing.currentTool === 'eraser' }" title="Eraser Tool">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                        d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53l-4.95-4.95l-4.95 4.95z" />
-                </svg>
-            </button>
-
-            <div class="toolbar-separator"></div>
-
-            <div class="color-picker-container">
-                <input type="color" x-model="drawing.currentColor" @change="updateDrawingColor" class="color-picker"
-                    title="Drawing Color">
-                <div class="color-presets">
-                    <template x-for="color in drawing.colorPresets" :key="color">
-                        <button @click="setDrawingColor(color)" class="color-preset"
-                            :style="`background-color: ${color}`" :title="color"></button>
-                    </template>
-                </div>
-            </div>
-
-            <div class="toolbar-separator"></div>
-
-            <div class="brush-size-container">
-                <label class="brush-size-label">Size:</label>
-                <input type="range" x-model="drawing.currentWidth" @input="updateBrushSize" class="brush-size-slider"
-                    min="1" max="20" title="Brush Size">
-                <span x-text="drawing.currentWidth" class="brush-size-value"></span>
-            </div>
-
-            <div class="toolbar-separator"></div>
-
-            <button @click="clearDrawings" class="toolbar-btn clear-btn" title="Clear All Drawings">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                        d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                </svg>
-            </button>
-        </div>
+        </template>
 
         <!-- Desktop UI Elements -->
         <div x-show="!isMobile" id="slideCounter">
@@ -119,7 +62,8 @@
         </div>
 
         <!-- Mobile Controller Interface -->
-        <div x-show="isMobile" id="mobileController" class="mobile-only">
+        <template x-if="isMobile">
+        <div id="mobileController" class="mobile-only">
             <div class="mobile-header">
                 <div x-text="presentationData?.title || 'Presentation'" class="presentation-title"></div>
                 <div class="slide-info">
@@ -135,10 +79,14 @@
                     'mobile-drawing-active': drawing.isDrawingMode
                 }">
                 <div class="mobile-slide-media">
-                    <img x-show="currentSlideImage" :src="currentSlideImage"
-                        :alt="`Slide ${displaySlideNumber}`"
-                        id="mobileSlidePreview"
-                        @load="onMobileSlideImageLoad()">
+                    <div x-show="currentSlideImage" class="slide-image-stack slide-image-stack--mobile">
+                        <img class="slide-layer" :class="{ 'slide-layer-visible': slideActiveLayer === 0 }"
+                            :src="slideLayerUrl0" :alt="`Slide ${displaySlideNumber}`"
+                            @load="slideError = false; onSlideLayerLoad(0)" @error="handleSlideLayerError">
+                        <img class="slide-layer" :class="{ 'slide-layer-visible': slideActiveLayer === 1 }"
+                            :src="slideLayerUrl1" :alt="`Slide ${displaySlideNumber}`"
+                            @load="slideError = false; onSlideLayerLoad(1)" @error="handleSlideLayerError">
+                    </div>
                     <canvas x-ref="mobileLaserTrailCanvas" class="laser-trail-canvas mobile-laser-trail"></canvas>
                     <canvas x-ref="mobileDrawingCanvas" class="mobile-drawing-canvas" :class="{ 
                         'drawing-mode': drawing.isDrawingMode,
@@ -193,6 +141,7 @@
                 </div>
             </div>
         </div>
+        </template>
     </div>
 
 </body>
