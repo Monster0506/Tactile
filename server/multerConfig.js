@@ -1,10 +1,11 @@
 const path = require('path');
 const multer = require('multer');
+const { uploadsTemp } = require('./paths');
 
 function createUploadMiddleware() {
   const storage = multer.diskStorage({
     destination(req, file, cb) {
-      cb(null, 'uploads/temp/');
+      cb(null, uploadsTemp);
     },
     filename(req, file, cb) {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
