@@ -31,8 +31,7 @@ describe('FileProcessor Integration Tests', () => {
     test('should correctly identify supported formats', () => {
       const testCases = [
         { filename: 'presentation.pdf', expected: '.pdf' },
-        { filename: 'slides.ppt', expected: '.ppt' },
-        { filename: 'deck.pptx', expected: '.pptx' },
+        { filename: 'deck.zip', expected: '.zip' },
         { filename: 'notes.md', expected: '.md' },
         { filename: 'document.docx', expected: null },
         { filename: 'image.png', expected: null },
@@ -46,8 +45,7 @@ describe('FileProcessor Integration Tests', () => {
 
     test('should be case insensitive', () => {
       expect(fileProcessor.detectFormat('PRESENTATION.PDF')).toBe('.pdf');
-      expect(fileProcessor.detectFormat('Slides.PPT')).toBe('.ppt');
-      expect(fileProcessor.detectFormat('Deck.PPTX')).toBe('.pptx');
+      expect(fileProcessor.detectFormat('Deck.ZIP')).toBe('.zip');
       expect(fileProcessor.detectFormat('Notes.MD')).toBe('.md');
     });
   });
@@ -91,28 +89,6 @@ describe('FileProcessor Integration Tests', () => {
       ).rejects.toThrow('Unsupported file format');
     });
 
-    test('should successfully process PowerPoint files', async () => {
-      const testFile = path.join(testDir, 'presentation.pptx');
-      await fs.writeFile(testFile, 'test content');
-
-      const result = await fileProcessor.processFile(testFile, 'presentation.pptx');
-      
-      expect(result).toMatchObject({
-        presentationId: expect.any(String),
-        title: 'presentation',
-        slides: expect.arrayContaining([
-          expect.objectContaining({
-            id: 'slide-1',
-            imageUrl: expect.stringContaining('/slides/'),
-            thumbnailUrl: expect.stringContaining('/slides/'),
-            order: 1
-          })
-        ]),
-        totalSlides: 1,
-        createdAt: expect.any(String)
-      });
-    });
-
     test('should successfully process Markdown files', async () => {
       const testFile = path.join(testDir, 'presentation.md');
       await fs.writeFile(testFile, '# Slide 1\nContent 1\n\n---\n\n# Slide 2\nContent 2');
@@ -139,7 +115,7 @@ describe('FileProcessor Integration Tests', () => {
   describe('Configuration', () => {
     test('should return correct supported formats', () => {
       const formats = fileProcessor.getSupportedFormats();
-      expect(formats).toEqual(['.pdf', '.ppt', '.pptx', '.md']);
+      expect(formats).toEqual(['.pdf', '.zip', '.md']);
       expect(Array.isArray(formats)).toBe(true);
     });
 

@@ -142,11 +142,20 @@ describe('SessionManager', () => {
     });
 
     test('should cleanup session when last client leaves', () => {
-      sessionManager.joinSession(session.sessionId, socketId, 'desktop');
-      sessionManager.leaveSession(socketId);
+      jest.useFakeTimers();
+      try {
+        sessionManager.joinSession(session.sessionId, socketId, 'desktop');
+        sessionManager.leaveSession(socketId);
 
-      expect(sessionManager.sessions.has(session.sessionId)).toBe(false);
-      expect(sessionManager.presentationSessions.has(presentationId)).toBe(false);
+        expect(sessionManager.sessions.has(session.sessionId)).toBe(true);
+
+        jest.advanceTimersByTime(5000);
+
+        expect(sessionManager.sessions.has(session.sessionId)).toBe(false);
+        expect(sessionManager.presentationSessions.has(presentationId)).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

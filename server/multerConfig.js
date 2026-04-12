@@ -17,12 +17,12 @@ function createUploadMiddleware() {
     storage,
     limits: { fileSize: 50 * 1024 * 1024 },
     fileFilter(req, file, cb) {
-      const allowedTypes = ['.pdf', '.ppt', '.pptx', '.md'];
+      const allowedTypes = ['.pdf', '.zip', '.md'];
       const fileExt = path.extname(file.originalname).toLowerCase();
       if (allowedTypes.includes(fileExt)) {
         cb(null, true);
       } else {
-        cb(new Error('Unsupported file format. Supported formats: PDF, PowerPoint, Markdown'));
+        cb(new Error('Unsupported file format. Supported formats: PDF, HacKSU slides (.zip), Markdown'));
       }
     }
   });

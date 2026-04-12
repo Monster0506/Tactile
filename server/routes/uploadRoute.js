@@ -7,6 +7,12 @@ function registerUploadRoute(app, { fileProcessor, storageService, upload }) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
+      console.log(
+        '[upload] processing:',
+        req.file.originalname,
+        `(${(req.file.size / 1024).toFixed(1)} KB)`
+      );
+
       const isValid = await fileProcessor.validateFile(req.file.path, req.file.originalname);
       if (!isValid) {
         return res.status(400).json({

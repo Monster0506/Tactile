@@ -6,6 +6,14 @@ const { app, server, io, storageService, sessionManager } = createApplication();
 
 storageService.initialize().catch(console.error);
 
+process.on('uncaughtException', (err) => {
+  console.error('[fatal] uncaughtException — process may be unstable:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[fatal] unhandledRejection:', reason);
+});
+
 const laserPointerInterval = setInterval(() => {
   sessionManager.autoHideLaserPointers();
 }, 1000);
@@ -13,6 +21,10 @@ const laserPointerInterval = setInterval(() => {
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Long HacKSU zip conversion (Puppeteer) can exceed default socket timeouts behind proxies (e.g. ngrok).
+server.headersTimeout = 120000;
+server.requestTimeout = 300000;
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');

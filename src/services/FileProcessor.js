@@ -4,6 +4,12 @@ const pdf = require('pdf-poppler');
 const sharp = require('sharp');
 const mime = require('mime-types');
 const MarkdownIt = require('markdown-it');
+const {
+  extractZipToDirectory,
+  buildSlideHtmlDocumentsFromExtractedRoot,
+  buildSlideHtmlDocumentsFromPolyglotDeck
+} = require('./htmlZipSlides');
+const { resolvePolyglotLayout } = require('./polyglotDeckCapture');
 
 /** pdf-poppler: max width in px of the rasterized page (longer side scales to this) */
 const PDF_RASTER_MAX_WIDTH_PX = 6144;
@@ -25,7 +31,7 @@ const SLIDE_THUMB_DEVICE_SCALE = 4;
 
 class FileProcessor {
   constructor() {
-    this.supportedFormats = ['.pdf', '.ppt', '.pptx', '.md'];
+    this.supportedFormats = ['.pdf', '.zip', '.md'];
     this.maxFileSize = 50 * 1024 * 1024;
     this.outputDir = 'uploads/slides';
     this.tempDir = 'uploads/temp';
@@ -65,9 +71,8 @@ class FileProcessor {
         case '.pdf':
           slides = await this.convertPDF(filePath, slideDir);
           break;
-        case '.ppt':
-        case '.pptx':
-          slides = await this.convertPowerPoint(filePath, slideDir);
+        case '.zip':
+          slides = await this.convertHtmlZipPresentation(filePath, slideDir);
           break;
         case '.md':
           slides = await this.convertMarkdown(filePath, slideDir);
@@ -126,12 +131,23 @@ class FileProcessor {
       const mimeType = mime.lookup(originalName);
       const expectedMimes = {
         '.pdf': 'application/pdf',
-        '.ppt': 'application/vnd.ms-powerpoint',
-        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        '.zip': 'application/zip',
         '.md': 'text/markdown'
       };
 
-      if (mimeType && expectedMimes[format] && mimeType !== expectedMimes[format]) {
+      const looseMimes = new Set([
+        'application/octet-stream',
+        'binary/octet-stream',
+        'application/x-msdownload'
+      ]);
+      const zipMimes = new Set(['application/zip', 'application/x-zip-compressed']);
+      const mimeOk =
+        !mimeType ||
+        !expectedMimes[format] ||
+        mimeType === expectedMimes[format] ||
+        looseMimes.has(mimeType) ||
+        (format === '.zip' && zipMimes.has(mimeType));
+      if (!mimeOk) {
         return false;
       }
 
@@ -201,59 +217,108 @@ class FileProcessor {
   }
 
   /**
-   * Convert PowerPoint to slide images
-   * @param {string} pptPath - Path to PowerPoint file
-   * @param {string} outputDir - Output directory for slides
-   * @returns {Promise<Array>} Array of slide objects
+   * Rasterize full HTML documents to slide + thumbnail PNGs (markdown + HacKSU presentation zips).
+   * @param {string[]} fullHtmlDocuments - One complete HTML document per slide
+   * @param {string} outputDir
+   * @returns {Promise<Array<{ id: string, imageUrl: string, thumbnailUrl: string, order: number }>>}
    */
-  async convertPowerPoint(pptPath, outputDir) {
-    try {
-      // For now, we'll create a basic implementation that generates placeholder slides
-      // In a production environment, this would use LibreOffice headless mode or similar
-      const slides = [];
-      
-      // Create a single placeholder slide for PowerPoint files
-      const slideNumber = 1;
-      const slideFilename = `slide-${slideNumber}.png`;
-      const slidePath = path.join(outputDir, slideFilename);
-      const thumbnailFilename = `thumb-${slideNumber}.png`;
-      const thumbnailPath = path.join(outputDir, thumbnailFilename);
-      
-      // Create a placeholder image using Sharp
-      const placeholderBuffer = await sharp({
-        create: {
-          width: SLIDE_VIEWPORT_WIDTH * SLIDE_SCREENSHOT_DEVICE_SCALE,
-          height: SLIDE_VIEWPORT_HEIGHT * SLIDE_SCREENSHOT_DEVICE_SCALE,
-          channels: 4,
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
-        }
-      })
-      .png({ compressionLevel: 9 })
-      .toBuffer();
-      
-      // Save the placeholder slide
-      await fs.writeFile(slidePath, placeholderBuffer);
-      
-      // Generate thumbnail
-      await sharp(slidePath)
-        .resize(SLIDE_THUMB_WIDTH, SLIDE_THUMB_HEIGHT, {
-          fit: 'inside',
-          withoutEnlargement: true,
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
-        })
-        .png({ compressionLevel: 9 })
-        .toFile(thumbnailPath);
-      
-      slides.push({
-        id: `slide-${slideNumber}`,
-        imageUrl: `/slides/${path.basename(outputDir)}/${slideFilename}`,
-        thumbnailUrl: `/slides/${path.basename(outputDir)}/${thumbnailFilename}`,
-        order: slideNumber
-      });
+  async renderHtmlPagesToSlides(fullHtmlDocuments, outputDir) {
+    const puppeteer = require('puppeteer');
+    const slides = [];
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
 
+    try {
+      for (let i = 0; i < fullHtmlDocuments.length; i++) {
+        const slideNumber = i + 1;
+        const slideId = `slide-${slideNumber}`;
+        const slideImagePath = path.join(outputDir, `${slideId}.png`);
+        const thumbImagePath = path.join(outputDir, `thumb-${slideNumber}.png`);
+
+        const page = await browser.newPage();
+
+        await page.setViewport({
+          width: SLIDE_VIEWPORT_WIDTH,
+          height: SLIDE_VIEWPORT_HEIGHT,
+          deviceScaleFactor: SLIDE_SCREENSHOT_DEVICE_SCALE
+        });
+
+        await page.setContent(fullHtmlDocuments[i], {
+          waitUntil: 'domcontentloaded'
+        });
+
+        await page.screenshot({
+          path: slideImagePath,
+          type: 'png',
+          fullPage: false
+        });
+
+        await page.setViewport({
+          width: SLIDE_THUMB_WIDTH,
+          height: SLIDE_THUMB_HEIGHT,
+          deviceScaleFactor: SLIDE_THUMB_DEVICE_SCALE
+        });
+
+        await page.screenshot({
+          path: thumbImagePath,
+          type: 'png',
+          fullPage: false
+        });
+
+        await page.close();
+
+        slides.push({
+          id: slideId,
+          imageUrl: `/slides/${path.basename(outputDir)}/${slideId}.png`,
+          thumbnailUrl: `/slides/${path.basename(outputDir)}/thumb-${slideNumber}.png`,
+          order: slideNumber
+        });
+
+        console.log(`Generated slide ${slideNumber}/${fullHtmlDocuments.length}`);
+      }
+    } finally {
+      await browser.close();
+    }
+
+    return slides;
+  }
+
+  /**
+   * HacKSU presentation format (.zip): Jinja deck (presentation/app.py + templates/ + examples/) rendered
+   * with Nunjucks, or plain HTML with &lt;div class="slide"&gt;…&lt;/div&gt;. CSS is inlined; assets use &lt;base href&gt; during capture.
+   * @param {string} zipPath
+   * @param {string} outputDir
+   * @returns {Promise<Array>}
+   */
+  async convertHtmlZipPresentation(zipPath, outputDir) {
+    const extractDir = path.join(outputDir, '_htmlsrc');
+    await fs.mkdir(extractDir, { recursive: true });
+
+    try {
+      const buf = await fs.readFile(zipPath);
+      await extractZipToDirectory(buf, extractDir);
+
+      const polyglotLayout = await resolvePolyglotLayout(extractDir);
+      if (polyglotLayout) {
+        const documents = await buildSlideHtmlDocumentsFromPolyglotDeck(
+          extractDir,
+          polyglotLayout.presentationDir
+        );
+        const slides = await this.renderHtmlPagesToSlides(documents, outputDir);
+        console.log(`Successfully converted ${slides.length} HacKSU slides (Jinja templates)`);
+        return slides;
+      }
+
+      const documents = await buildSlideHtmlDocumentsFromExtractedRoot(extractDir);
+      const slides = await this.renderHtmlPagesToSlides(documents, outputDir);
+      console.log(`Successfully converted ${slides.length} HacKSU slides (static HTML)`);
       return slides;
     } catch (error) {
-      throw new Error(`PowerPoint conversion failed: ${error.message}`);
+      throw new Error(`HacKSU slides conversion failed: ${error.message}`);
+    } finally {
+      await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
     }
   }
 
@@ -264,16 +329,10 @@ class FileProcessor {
    * @returns {Promise<Array>} Array of slide objects
    */
   async convertMarkdown(mdPath, outputDir) {
-    const puppeteer = require('puppeteer');
-    
     try {
-      // Read markdown content
       const markdownContent = await fs.readFile(mdPath, 'utf8');
-      
-      // Parse and paginate markdown
       const pages = this.paginateMarkdown(markdownContent);
-      
-      const slides = [];
+
       const md = new MarkdownIt({
         html: true,
         linkify: true,
@@ -290,79 +349,15 @@ class FileProcessor {
           return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
         }
       });
-      
-      // Launch browser for rendering
-      const browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+
+      const fullHtmls = pages.map((page, i) => {
+        const htmlContent = md.render(page);
+        return this.createSlideHtml(htmlContent, i + 1);
       });
-      
-      try {
-        for (let i = 0; i < pages.length; i++) {
-          const slideNumber = i + 1;
-          const slideId = `slide-${slideNumber}`;
-          const slideImagePath = path.join(outputDir, `${slideId}.png`);
-          const thumbImagePath = path.join(outputDir, `thumb-${slideNumber}.png`);
-          
-          // Convert markdown to HTML
-          const htmlContent = md.render(pages[i]);
-          
-          // Create full HTML page with styling
-          const fullHtml = this.createSlideHtml(htmlContent, slideNumber);
-          
-          // Create new page for each slide
-          const page = await browser.newPage();
-          
-          // Set viewport for slide dimensions (16:9 aspect ratio)
-          await page.setViewport({
-            width: SLIDE_VIEWPORT_WIDTH,
-            height: SLIDE_VIEWPORT_HEIGHT,
-            deviceScaleFactor: SLIDE_SCREENSHOT_DEVICE_SCALE
-          });
-          
-          // Set content and wait for fonts/images to load
-          await page.setContent(fullHtml, {
-            waitUntil: ['networkidle0', 'domcontentloaded']
-          });
-          
-          // Take screenshot for main slide
-          await page.screenshot({
-            path: slideImagePath,
-            type: 'png',
-            fullPage: false
-          });
 
-          await page.setViewport({
-            width: SLIDE_THUMB_WIDTH,
-            height: SLIDE_THUMB_HEIGHT,
-            deviceScaleFactor: SLIDE_THUMB_DEVICE_SCALE
-          });
-
-          await page.screenshot({
-            path: thumbImagePath,
-            type: 'png',
-            fullPage: false
-          });
-          
-          await page.close();
-          
-          // Add slide to results
-          slides.push({
-            id: slideId,
-            imageUrl: `/slides/${path.basename(outputDir)}/${slideId}.png`,
-            thumbnailUrl: `/slides/${path.basename(outputDir)}/thumb-${slideNumber}.png`,
-            order: slideNumber
-          });
-          
-          console.log(`Generated slide ${slideNumber}/${pages.length}`);
-        }
-      } finally {
-        await browser.close();
-      }
-      
+      const slides = await this.renderHtmlPagesToSlides(fullHtmls, outputDir);
       console.log(`Successfully converted ${pages.length} markdown slides`);
       return slides;
-      
     } catch (error) {
       console.error('Error converting markdown:', error);
       throw new Error(`Failed to convert markdown: ${error.message}`);
@@ -412,9 +407,10 @@ class FileProcessor {
    * Create styled HTML for a slide
    * @param {string} htmlContent - Rendered HTML from markdown
    * @param {number} slideNumber - Slide number
+   * @param {string} [extraCss] - Optional CSS appended before </style>
    * @returns {string} Complete HTML page
    */
-  createSlideHtml(htmlContent, slideNumber) {
+  createSlideHtml(htmlContent, slideNumber, extraCss = '') {
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -661,6 +657,7 @@ class FileProcessor {
             margin: 50px 0;
             border-radius: 2px;
         }
+        ${extraCss}
     </style>
 </head>
 <body>

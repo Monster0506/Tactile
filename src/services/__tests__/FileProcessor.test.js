@@ -3,22 +3,50 @@ const path = require('path');
 const FileProcessor = require('../FileProcessor');
 
 // Mock dependencies
+jest.mock('../htmlZipSlides', () => ({
+    extractZipToDirectory: jest.fn(),
+    buildSlideHtmlDocumentsFromExtractedRoot: jest.fn(),
+    buildSlideHtmlDocumentsFromPolyglotDeck: jest.fn()
+}));
+jest.mock('../polyglotDeckCapture', () => ({
+    resolvePolyglotLayout: jest.fn()
+}));
 jest.mock('pdf-poppler');
 jest.mock('sharp');
 jest.mock('markdown-it');
+jest.mock('puppeteer', () => ({
+    launch: jest.fn().mockResolvedValue({
+        newPage: jest.fn().mockResolvedValue({
+            setViewport: jest.fn().mockResolvedValue(undefined),
+            setContent: jest.fn().mockResolvedValue(undefined),
+            screenshot: jest.fn().mockResolvedValue(undefined),
+            close: jest.fn().mockResolvedValue(undefined)
+        }),
+        close: jest.fn().mockResolvedValue(undefined)
+    })
+}));
 jest.mock('fs', () => ({
     promises: {
         stat: jest.fn(),
         mkdir: jest.fn(),
         unlink: jest.fn(),
         readFile: jest.fn(),
-        writeFile: jest.fn()
+        writeFile: jest.fn(),
+        access: jest.fn(),
+        rm: jest.fn()
     }
 }));
 
 const mockPdf = require('pdf-poppler');
 const mockSharp = require('sharp');
 const mockMarkdownIt = require('markdown-it');
+const mockPuppeteer = require('puppeteer');
+const {
+    extractZipToDirectory,
+    buildSlideHtmlDocumentsFromExtractedRoot,
+    buildSlideHtmlDocumentsFromPolyglotDeck
+} = require('../htmlZipSlides');
+const { resolvePolyglotLayout } = require('../polyglotDeckCapture');
 
 describe('FileProcessor', () => {
     let fileProcessor;
@@ -26,6 +54,16 @@ describe('FileProcessor', () => {
     beforeEach(() => {
         fileProcessor = new FileProcessor();
         jest.clearAllMocks();
+        fs.access.mockResolvedValue(undefined);
+        extractZipToDirectory.mockResolvedValue(undefined);
+        resolvePolyglotLayout.mockResolvedValue(null);
+        buildSlideHtmlDocumentsFromExtractedRoot.mockResolvedValue([
+            '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div class="slide">x</div></body></html>'
+        ]);
+        buildSlideHtmlDocumentsFromPolyglotDeck.mockResolvedValue([
+            '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div class="slide">x</div></body></html>'
+        ]);
+        fs.rm.mockResolvedValue(undefined);
 
         // Setup sharp mock chain for both creation and file operations
         const mockSharpInstance = {
@@ -51,9 +89,9 @@ describe('FileProcessor', () => {
             expect(fileProcessor.detectFormat('PRESENTATION.PDF')).toBe('.pdf');
         });
 
-        test('should detect PowerPoint formats', () => {
-            expect(fileProcessor.detectFormat('presentation.ppt')).toBe('.ppt');
-            expect(fileProcessor.detectFormat('presentation.pptx')).toBe('.pptx');
+        test('should detect HacKSU presentation zip format', () => {
+            expect(fileProcessor.detectFormat('deck.zip')).toBe('.zip');
+            expect(fileProcessor.detectFormat('Deck.ZIP')).toBe('.zip');
         });
 
         test('should detect Markdown format', () => {
@@ -156,10 +194,10 @@ describe('FileProcessor', () => {
             expect(fs.unlink).toHaveBeenCalledWith('/temp/file.pdf');
         });
 
-        test('should process PowerPoint file successfully', async () => {
-            fs.writeFile.mockResolvedValue();
+        test('should process HacKSU presentation zip successfully', async () => {
+            fs.readFile.mockResolvedValue(Buffer.from('zip-bytes'));
 
-            const result = await fileProcessor.processFile('/temp/file.pptx', 'presentation.pptx');
+            const result = await fileProcessor.processFile('/temp/file.zip', 'presentation.zip');
 
             expect(result).toMatchObject({
                 presentationId: expect.any(String),
@@ -176,14 +214,15 @@ describe('FileProcessor', () => {
                 createdAt: expect.any(String)
             });
 
-            expect(fs.writeFile).toHaveBeenCalled();
+            expect(extractZipToDirectory).toHaveBeenCalled();
+            expect(buildSlideHtmlDocumentsFromExtractedRoot).toHaveBeenCalled();
+            expect(mockPuppeteer.launch).toHaveBeenCalled();
         });
 
         test('should process Markdown file successfully', async () => {
             const mockMarkdown = '# Slide 1\nContent 1\n\n---\n\n# Slide 2\nContent 2';
 
             fs.readFile.mockResolvedValue(mockMarkdown);
-            fs.writeFile.mockResolvedValue();
 
             const result = await fileProcessor.processFile('/temp/file.md', 'presentation.md');
 
@@ -202,8 +241,8 @@ describe('FileProcessor', () => {
                 createdAt: expect.any(String)
             });
 
-            expect(fs.readFile).toHaveBeenCalledWith('/temp/file.md', 'utf-8');
-            expect(fs.writeFile).toHaveBeenCalled();
+            expect(fs.readFile).toHaveBeenCalledWith('/temp/file.md', 'utf8');
+            expect(mockPuppeteer.launch).toHaveBeenCalled();
         });
     });
 
@@ -250,47 +289,51 @@ describe('FileProcessor', () => {
         });
     });
 
-    describe('convertPowerPoint', () => {
+    describe('convertHtmlZipPresentation', () => {
         beforeEach(() => {
-            fs.writeFile.mockResolvedValue();
+            fs.readFile.mockResolvedValue(Buffer.from('zip-bytes'));
+            extractZipToDirectory.mockResolvedValue(undefined);
+            resolvePolyglotLayout.mockResolvedValue(null);
+            buildSlideHtmlDocumentsFromExtractedRoot.mockResolvedValue([
+                '<!DOCTYPE html><html><head></head><body><div class="slide">a</div></body></html>',
+                '<!DOCTYPE html><html><head></head><body><div class="slide">b</div></body></html>'
+            ]);
         });
 
-        test('should convert PowerPoint to placeholder images', async () => {
-            const slides = await fileProcessor.convertPowerPoint('/path/to/file.pptx', '/output/dir');
+        test('should convert HacKSU presentation zip via extract and Puppeteer', async () => {
+            const slides = await fileProcessor.convertHtmlZipPresentation('/path/to/file.zip', '/output/dir');
 
-            expect(fs.writeFile).toHaveBeenCalled();
+            expect(fs.readFile).toHaveBeenCalledWith('/path/to/file.zip');
+            expect(extractZipToDirectory).toHaveBeenCalled();
+            expect(buildSlideHtmlDocumentsFromExtractedRoot).toHaveBeenCalled();
+            expect(mockPuppeteer.launch).toHaveBeenCalled();
 
-            expect(slides).toHaveLength(1);
+            expect(slides).toHaveLength(2);
             expect(slides[0]).toMatchObject({
                 id: 'slide-1',
                 order: 1
             });
+            expect(fs.rm).toHaveBeenCalled();
         });
 
-        test('should handle Sharp creation errors', async () => {
-            mockSharp.mockImplementation(() => {
-                throw new Error('Sharp failed');
-            });
+        test('should surface empty zip slides', async () => {
+            buildSlideHtmlDocumentsFromExtractedRoot.mockRejectedValueOnce(new Error('No slides found'));
 
             await expect(
-                fileProcessor.convertPowerPoint('/path/to/file.pptx', '/output/dir')
-            ).rejects.toThrow('PowerPoint conversion failed: Sharp failed');
+                fileProcessor.convertHtmlZipPresentation('/x.zip', '/out')
+            ).rejects.toThrow('HacKSU slides conversion failed');
         });
     });
 
     describe('convertMarkdown', () => {
-        beforeEach(() => {
-            fs.writeFile.mockResolvedValue();
-        });
-
         test('should convert markdown with horizontal rule pagination', async () => {
             const mockMarkdown = '# Slide 1\nContent 1\n\n---\n\n# Slide 2\nContent 2';
             fs.readFile.mockResolvedValue(mockMarkdown);
 
             const slides = await fileProcessor.convertMarkdown('/path/to/file.md', '/output/dir');
 
-            expect(fs.readFile).toHaveBeenCalledWith('/path/to/file.md', 'utf-8');
-            expect(fs.writeFile).toHaveBeenCalledTimes(2); // 2 slides (thumbnails use sharp.toFile)
+            expect(fs.readFile).toHaveBeenCalledWith('/path/to/file.md', 'utf8');
+            expect(mockPuppeteer.launch).toHaveBeenCalled();
 
             expect(slides).toHaveLength(2);
             expect(slides[0]).toMatchObject({
@@ -306,7 +349,6 @@ describe('FileProcessor', () => {
             const slides = await fileProcessor.convertMarkdown('/path/to/file.md', '/output/dir');
 
             expect(slides).toHaveLength(2);
-            expect(fs.writeFile).toHaveBeenCalledTimes(2); // 2 slides (thumbnails use sharp.toFile)
         });
 
         test('should handle single slide markdown', async () => {
@@ -316,18 +358,23 @@ describe('FileProcessor', () => {
             const slides = await fileProcessor.convertMarkdown('/path/to/file.md', '/output/dir');
 
             expect(slides).toHaveLength(1);
-            expect(fs.writeFile).toHaveBeenCalledTimes(1); // 1 slide (thumbnail uses sharp.toFile)
         });
 
-        test('should handle Sharp creation errors', async () => {
+        test('should propagate screenshot failures', async () => {
             fs.readFile.mockResolvedValue('# Test slide');
-            mockSharp.mockImplementation(() => {
-                throw new Error('Sharp failed');
+            mockPuppeteer.launch.mockResolvedValueOnce({
+                newPage: jest.fn().mockResolvedValue({
+                    setViewport: jest.fn().mockResolvedValue(undefined),
+                    setContent: jest.fn().mockResolvedValue(undefined),
+                    screenshot: jest.fn().mockRejectedValue(new Error('screenshot failed')),
+                    close: jest.fn().mockResolvedValue(undefined)
+                }),
+                close: jest.fn().mockResolvedValue(undefined)
             });
 
             await expect(
                 fileProcessor.convertMarkdown('/path/to/file.md', '/output/dir')
-            ).rejects.toThrow('Markdown conversion failed: Sharp failed');
+            ).rejects.toThrow('Failed to convert markdown: screenshot failed');
         });
     });
 
@@ -370,28 +417,21 @@ describe('FileProcessor', () => {
         });
     });
 
-    describe('createSlideHTML', () => {
+    describe('createSlideHtml', () => {
         test('should create proper HTML structure', () => {
-            // Mock MarkdownIt constructor and render method
-            const mockMdInstance = {
-                render: jest.fn().mockReturnValue('<h1>Test Content</h1>')
-            };
-            mockMarkdownIt.mockReturnValue(mockMdInstance);
-
-            const html = fileProcessor.createSlideHTML('# Test Content');
+            const html = fileProcessor.createSlideHtml('<h1>Test Content</h1>', 1);
 
             expect(html).toContain('<!DOCTYPE html>');
             expect(html).toContain('<h1>Test Content</h1>');
             expect(html).toContain('width: 1920px');
             expect(html).toContain('height: 1080px');
-            expect(mockMdInstance.render).toHaveBeenCalledWith('# Test Content');
         });
     });
 
     describe('getSupportedFormats', () => {
         test('should return array of supported formats', () => {
             const formats = fileProcessor.getSupportedFormats();
-            expect(formats).toEqual(['.pdf', '.ppt', '.pptx', '.md']);
+            expect(formats).toEqual(['.pdf', '.zip', '.md']);
         });
 
         test('should return a copy of the array', () => {

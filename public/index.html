@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Presentation Viewer</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/style.css">
     <script type="module" src="/js/upload/bootstrap.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -17,7 +18,7 @@
             <h2>Upload Your Presentation</h2>
             <form @submit.prevent="uploadFile" enctype="multipart/form-data">
                 <div class="file-input-wrapper">
-                    <input type="file" x-ref="fileInput" name="presentation" accept=".pdf,.ppt,.pptx,.md" required
+                    <input type="file" x-ref="fileInput" name="presentation" accept=".pdf,.zip,.md" required
                         @change="updateFileName">
                     <label for="fileInput" x-text="fileName">Choose File</label>
                 </div>
@@ -32,7 +33,7 @@
             <h3>Supported Formats:</h3>
             <ul>
                 <li>PDF (.pdf)</li>
-                <li>PowerPoint (.ppt, .pptx)</li>
+                <li>HacKSU slides (.zip)</li>
                 <li>Markdown (.md)</li>
             </ul>
         </div>

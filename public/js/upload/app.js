@@ -41,9 +41,14 @@ export function uploadApp() {
         try {
           result = raw ? JSON.parse(raw) : {};
         } catch {
-          const hint = raw.trimStart().startsWith('<')
-            ? 'Upload returned a web page instead of data (ngrok warning, timeout, or proxy). Try again; use localhost if it persists.'
-            : `Invalid response (HTTP ${response.status}).`;
+          const isNgrokFail =
+            response.status === 503 &&
+            /ngrok|ERR_NGROK|incomplete HTTP response/i.test(raw);
+          const hint = isNgrokFail
+            ? 'Ngrok could not get a valid HTTP response from your app (often ERR_NGROK_3004). Point the tunnel at the same protocol as the server: for a typical Node app use ngrok http http://127.0.0.1:PORT; if you serve HTTPS locally use ngrok http https://127.0.0.1:PORT. Confirm the server is running and the port matches.'
+            : raw.trimStart().startsWith('<')
+              ? 'Upload returned a web page instead of data (ngrok warning, timeout, or proxy). Try again; use localhost if it persists.'
+              : `Invalid response (HTTP ${response.status}).`;
           this.showStatus(hint, 'error');
           console.error('Upload non-JSON response:', response.status, raw.slice(0, 500));
           return;

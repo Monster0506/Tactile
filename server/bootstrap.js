@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -24,6 +25,7 @@ const SOCKET_OPTIONS = {
  */
 function createApplication() {
   const app = express();
+  app.set('trust proxy', 1);
   const server = http.createServer(app);
   const io = socketIo(server, SOCKET_OPTIONS);
 
@@ -34,6 +36,10 @@ function createApplication() {
 
   app.use(cors());
   app.use(express.json());
+  app.get('/favicon.ico', (req, res) => {
+    res.type('image/svg+xml');
+    res.sendFile(path.join(publicDir, 'favicon.svg'));
+  });
   app.use(express.static(publicDir));
   app.use('/slides', express.static(uploadsSlides));
 
