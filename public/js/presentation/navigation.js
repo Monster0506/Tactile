@@ -115,7 +115,17 @@ export const navigation = {
     if (typeof this.clearLaserTrail === 'function') {
       this.clearLaserTrail();
     }
-    setTimeout(() => this.redrawCurrentSlide(), 100);
+    setTimeout(() => {
+      if (this.isMobile) {
+        if (typeof this.resizeMobileDrawingCanvas === 'function') {
+          this.resizeMobileDrawingCanvas();
+        }
+        if (typeof this.resizeLaserCanvas === 'function') {
+          this.resizeLaserCanvas();
+        }
+      }
+      this.redrawCurrentSlide();
+    }, 100);
   },
 
   goToSlide(newSlide) {

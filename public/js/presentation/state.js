@@ -2,7 +2,6 @@ export function createDrawingState() {
   return {
     isDrawingMode: false,
     toolbarVisible: false,
-    mobileControlsVisible: false,
     currentTool: 'pen',
     currentColor: '#ff0000',
     currentWidth: 3,

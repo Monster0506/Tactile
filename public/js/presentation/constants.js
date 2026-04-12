@@ -1,6 +1,12 @@
 export const SWIPE_MIN_DISTANCE = 50;
 export const SWIPE_MAX_TIME_MS = 500;
 export const SWIPE_MAX_VERTICAL = 100;
+
+/** Tap on slide preview (no swipe): advance one slide, or go back if in the left edge zone */
+export const TAP_MAX_MOVE_PX = 20;
+export const TAP_MAX_DURATION_MS = 400;
+/** Left fraction of the preview width where a tap goes to the previous slide */
+export const TAP_BACK_ZONE_WIDTH_FRAC = 0.22;
 export const PING_INTERVAL_MS = 30000;
 
 /** Min time between emitting pointer samples to the server (ms) */

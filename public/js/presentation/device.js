@@ -8,7 +8,6 @@ export const device = {
     this.isMobile = isMobileUA || (isTouchDevice && isSmallScreen);
 
     if (this.isMobile) {
-      this.drawing.mobileControlsVisible = true;
       this.preventZoom();
     }
   },

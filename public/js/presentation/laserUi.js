@@ -2,6 +2,9 @@ import {
   SWIPE_MIN_DISTANCE,
   SWIPE_MAX_TIME_MS,
   SWIPE_MAX_VERTICAL,
+  TAP_MAX_MOVE_PX,
+  TAP_MAX_DURATION_MS,
+  TAP_BACK_ZONE_WIDTH_FRAC,
   LASER_EMIT_INTERVAL_MS,
   LASER_FADE_STEP,
   LASER_REMOTE_SMOOTHING,
@@ -30,7 +33,7 @@ export const laserUi = {
     if (!canvas) return;
 
     const host = this.isMobile
-      ? document.querySelector('.mobile-slide-preview')
+      ? document.querySelector('.mobile-slide-media')
       : document.getElementById('slideDisplay');
     if (!host) return;
 
@@ -58,25 +61,28 @@ export const laserUi = {
     const px1 = x1 * w;
     const py1 = y1 * h;
 
+    const m = this.isMobile;
+    const outerW = m ? 3.5 : 8;
+    const innerW = m ? 1.75 : 3.5;
+    const headR = m ? 4 : 8;
+
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     ctx.strokeStyle = 'rgba(255, 70, 70, 0.42)';
-    ctx.lineWidth = 8;
+    ctx.lineWidth = outerW;
     ctx.beginPath();
     ctx.moveTo(px0, py0);
     ctx.lineTo(px1, py1);
     ctx.stroke();
 
     ctx.strokeStyle = 'rgba(255, 110, 110, 0.9)';
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = innerW;
     ctx.beginPath();
     ctx.moveTo(px0, py0);
     ctx.lineTo(px1, py1);
     ctx.stroke();
-
-    const headR = 8;
     const g = ctx.createRadialGradient(px1, py1, 0, px1, py1, headR);
     g.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
     g.addColorStop(0.35, 'rgba(255, 130, 130, 0.55)');
@@ -198,7 +204,7 @@ export const laserUi = {
 
   getLaserTargetElement() {
     if (this.isMobile) {
-      return document.querySelector('.mobile-slide-preview');
+      return document.querySelector('.mobile-slide-media');
     }
     return document.getElementById('slideDisplay');
   },
@@ -301,6 +307,26 @@ export const laserUi = {
       } else if (deltaX < -SWIPE_MIN_DISTANCE) {
         this.nextSlide();
         this.showSwipeFeedback('left');
+      } else if (
+        Math.abs(deltaX) <= TAP_MAX_MOVE_PX &&
+        Math.abs(deltaY) <= TAP_MAX_MOVE_PX &&
+        deltaTime <= TAP_MAX_DURATION_MS
+      ) {
+        const preview = document.querySelector('.mobile-slide-preview');
+        let tapBack = false;
+        if (preview) {
+          const rect = preview.getBoundingClientRect();
+          if (rect.width > 1) {
+            const nx = (touchEndX - rect.left) / rect.width;
+            tapBack = nx < TAP_BACK_ZONE_WIDTH_FRAC;
+          }
+        }
+        if (tapBack) {
+          this.previousSlide();
+          this.showSwipeFeedback('right');
+        } else {
+          this.nextSlide();
+        }
       }
     }
   },
@@ -322,7 +348,31 @@ export const laserUi = {
     }, 300);
   },
 
-  toggleLaserPointer() {
+  /** Turn off laser before drawing; keeps socket in sync */
+  ensureLaserOffForAnnotation() {
+    if (!this.isLaserActive) return;
+    this.isLaserActive = false;
+    this.clearLaserTrail();
+    if (this.socket?.connected) {
+      this.socket.emit('laser-pointer', { active: false });
+    }
+  },
+
+  /**
+   * Mobile: pointer tool — exits draw mode and toggles laser trail.
+   */
+  selectMobilePointer() {
+    if (this.drawing.isDrawingMode) {
+      if (typeof this.deactivateMobileDrawing === 'function') {
+        this.deactivateMobileDrawing();
+      } else {
+        this.drawing.isDrawingMode = false;
+        this.stopDrawing();
+        const c = this.$refs.mobileDrawingCanvas;
+        if (c) c.style.pointerEvents = 'none';
+      }
+    }
+
     this.isLaserActive = !this.isLaserActive;
     if (!this.isLaserActive) {
       this.clearLaserTrail();
@@ -330,9 +380,9 @@ export const laserUi = {
       this.laser.remoteSmoothing = false;
       this.resizeLaserCanvas();
     }
-    this.socket.emit('laser-pointer', {
-      active: this.isLaserActive
-    });
+    if (this.socket?.connected) {
+      this.socket.emit('laser-pointer', { active: this.isLaserActive });
+    }
     this.provideTactileFeedback();
   },
 

@@ -130,46 +130,55 @@
 
             <div class="mobile-slide-preview" @touchstart="handleMobileTouchStart" @touchend="handleMobileTouchEnd"
                 @touchmove.prevent="onLaserTouchMove($event)"
-                :class="{ 'interaction-lock': isLaserActive || drawing.isDrawingMode }">
-                <img x-show="currentSlideImage" :src="currentSlideImage"
-                    :alt="`Slide ${displaySlideNumber}`"
-                    id="mobileSlidePreview">
-                <canvas x-ref="mobileLaserTrailCanvas" class="laser-trail-canvas mobile-laser-trail"></canvas>
-                <canvas x-ref="mobileDrawingCanvas" class="mobile-drawing-canvas" :class="{ 
-                    'drawing-mode': drawing.isDrawingMode,
-                    'eraser-mode': drawing.currentTool === 'eraser'
-                }"></canvas>
+                :class="{
+                    'interaction-lock': isLaserActive || drawing.isDrawingMode,
+                    'mobile-drawing-active': drawing.isDrawingMode
+                }">
+                <div class="mobile-slide-media">
+                    <img x-show="currentSlideImage" :src="currentSlideImage"
+                        :alt="`Slide ${displaySlideNumber}`"
+                        id="mobileSlidePreview"
+                        @load="onMobileSlideImageLoad()">
+                    <canvas x-ref="mobileLaserTrailCanvas" class="laser-trail-canvas mobile-laser-trail"></canvas>
+                    <canvas x-ref="mobileDrawingCanvas" class="mobile-drawing-canvas" :class="{ 
+                        'drawing-mode': drawing.isDrawingMode,
+                        'eraser-mode': drawing.currentTool === 'eraser'
+                    }"></canvas>
+                </div>
             </div>
 
-            <div class="mobile-controls">
-                <button @click="previousSlide" :disabled="currentSlide === 0" class="nav-btn prev-btn"
-                    aria-label="Previous slide">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+            <div class="mobile-tool-strip" role="toolbar" aria-label="Annotation tools">
+                <button type="button" @click="selectMobilePen()"
+                    :class="{ 'active': drawing.isDrawingMode && drawing.currentTool === 'pen' }"
+                    class="mobile-tool-chip" title="Pen" aria-label="Pen">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                     </svg>
                 </button>
-
-                <div class="control-center">
-                    <button @click="provideTactileFeedback" class="control-round-btn" aria-label="Play/Pause">
-                        <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
-                    </button>
-
-                    <button @click="toggleLaserPointer" :class="{ 'active': isLaserActive }" class="control-round-btn"
-                        aria-label="Pointer trail">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="12" r="3" />
-                            <path
-                                d="M12 1v6m0 10v6m11-7h-6m-10 0H1m15.5-6.5l-4.24 4.24M7.76 7.76L3.52 3.52m12.96 12.96l-4.24-4.24M7.76 16.24l-4.24 4.24" />
-                        </svg>
-                    </button>
-                </div>
-
-                <button @click="nextSlide" :disabled="currentSlide >= totalSlides - 1" class="nav-btn next-btn"
-                    aria-label="Next slide">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                <button type="button" @click="selectMobileEraser()"
+                    :class="{ 'active': drawing.isDrawingMode && drawing.currentTool === 'eraser' }"
+                    class="mobile-tool-chip" title="Eraser" aria-label="Eraser">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53l-4.95-4.95l-4.95 4.95z" />
+                    </svg>
+                </button>
+                <button type="button" @click="selectMobilePointer()"
+                    :class="{ 'active': isLaserActive && !drawing.isDrawingMode }"
+                    class="mobile-tool-chip mobile-tool-chip-pointer" title="Laser pointer" aria-label="Laser pointer">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M12 1v6m0 10v6m11-7h-6m-10 0H1m15.5-6.5l-4.24 4.24M7.76 7.76L3.52 3.52m12.96 12.96l-4.24-4.24M7.76 16.24l-4.24 4.24" />
+                    </svg>
+                </button>
+                <button type="button" @click="clearDrawings(); provideTactileFeedback()"
+                    class="mobile-tool-chip mobile-tool-chip-clear" title="Clear annotations on this slide"
+                    aria-label="Clear annotations">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path
+                            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                     </svg>
                 </button>
             </div>
@@ -180,51 +189,7 @@
                     <span x-text="isConnected ? 'Connected' : 'Disconnected'">Connected</span>
                 </div>
                 <div class="client-info">
-                    <span x-text="clientCount">1</span> device(s) connected
-                </div>
-            </div>
-
-            <!-- Mobile Drawing Controls -->
-            <div x-show="drawing.mobileControlsVisible" class="mobile-drawing-controls"
-                :class="{ 'visible': drawing.mobileControlsVisible }">
-                <div class="mobile-drawing-header">
-                    <button @click="toggleMobileDrawing" :class="{ 'active': drawing.isDrawingMode }"
-                        class="mobile-tool-btn toggle-btn" title="Toggle Drawing">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                        </svg>
-                    </button>
-                    <span class="mobile-drawing-title">Drawing Tools</span>
-                </div>
-
-                <div class="mobile-drawing-toolbar">
-                    <button @click="setDrawingTool('pen')" :class="{ 'active': drawing.currentTool === 'pen' }"
-                        class="mobile-tool-btn" title="Pen">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                        </svg>
-                    </button>
-
-                    <button @click="setDrawingTool('eraser')" :class="{ 'active': drawing.currentTool === 'eraser' }"
-                        class="mobile-tool-btn" title="Eraser">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53l-4.95-4.95l-4.95 4.95z" />
-                        </svg>
-                    </button>
-
-                    <div class="mobile-color-picker">
-                        <input type="color" x-model="drawing.currentColor" @change="updateDrawingColor" title="Color">
-                    </div>
-
-                    <button @click="clearDrawings" class="mobile-tool-btn clear-btn" title="Clear">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                        </svg>
-                    </button>
+                    <span x-text="clientCount">1</span> device(s)
                 </div>
             </div>
         </div>

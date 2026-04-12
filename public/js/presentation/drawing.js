@@ -28,6 +28,17 @@ export const drawing = {
     window.addEventListener('resize', () => this.resizeDrawingCanvas());
   },
 
+  onMobileSlideImageLoad() {
+    if (!this.isMobile) return;
+    this.$nextTick(() => {
+      this.resizeMobileDrawingCanvas();
+      if (typeof this.resizeLaserCanvas === 'function') {
+        this.resizeLaserCanvas();
+      }
+      this.redrawCurrentSlide();
+    });
+  },
+
   setupMobileDrawingCanvas() {
     const canvas = this.$refs.mobileDrawingCanvas;
     if (!canvas) return;
@@ -55,12 +66,24 @@ export const drawing = {
 
   resizeMobileDrawingCanvas() {
     const canvas = this.$refs.mobileDrawingCanvas;
-    const slidePreview = document.querySelector('.mobile-slide-preview');
-    if (!canvas || !slidePreview) return;
+    const media = document.querySelector('.mobile-slide-media');
+    if (!canvas || !media) return;
 
-    const rect = slidePreview.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    const rect = media.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(rect.width));
+    const h = Math.max(1, Math.floor(rect.height));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+
+    if (this.drawing.mobileCtx) {
+      this.drawing.mobileCtx.setTransform(1, 0, 0, 1, 0, 0);
+      this.drawing.mobileCtx.scale(dpr, dpr);
+      this.drawing.mobileCtx.lineCap = 'round';
+      this.drawing.mobileCtx.lineJoin = 'round';
+    }
 
     this.redrawCurrentSlide();
   },
@@ -141,19 +164,70 @@ export const drawing = {
     }
   },
 
-  toggleMobileDrawing() {
-    this.drawing.isDrawingMode = !this.drawing.isDrawingMode;
+  /** Exit mobile draw mode without changing desktop canvas */
+  deactivateMobileDrawing() {
+    this.drawing.isDrawingMode = false;
+    this.stopDrawing();
+    const canvas = this.$refs.mobileDrawingCanvas;
+    if (canvas) {
+      canvas.style.pointerEvents = 'none';
+    }
+  },
+
+  /** Mobile: green pen — toggles pen draw mode */
+  selectMobilePen() {
+    if (!this.isMobile) return;
+    if (this.drawing.isDrawingMode && this.drawing.currentTool === 'pen') {
+      this.deactivateMobileDrawing();
+      this.provideTactileFeedback();
+      return;
+    }
+    if (typeof this.ensureLaserOffForAnnotation === 'function') {
+      this.ensureLaserOffForAnnotation();
+    }
+    this.drawing.currentTool = 'pen';
+    this.drawing.currentColor = '#22c55e';
+    this.drawing.isDrawingMode = true;
 
     const canvas = this.$refs.mobileDrawingCanvas;
     if (canvas) {
-      canvas.style.pointerEvents = this.drawing.isDrawingMode ? 'auto' : 'none';
+      canvas.style.pointerEvents = 'auto';
     }
-
-    if (!this.drawing.isDrawingMode) {
-      this.stopDrawing();
-    }
-
     this.provideTactileFeedback();
+    this.$nextTick(() => {
+      this.resizeMobileDrawingCanvas();
+      if (typeof this.resizeLaserCanvas === 'function') {
+        this.resizeLaserCanvas();
+      }
+    });
+  },
+
+  /** Mobile: eraser — toggles eraser mode */
+  selectMobileEraser() {
+    if (!this.isMobile) return;
+    if (this.drawing.isDrawingMode && this.drawing.currentTool === 'eraser') {
+      this.deactivateMobileDrawing();
+      this.provideTactileFeedback();
+      return;
+    }
+    if (typeof this.ensureLaserOffForAnnotation === 'function') {
+      this.ensureLaserOffForAnnotation();
+    }
+    this.drawing.currentTool = 'eraser';
+    this.drawing.currentColor = '#22c55e';
+    this.drawing.isDrawingMode = true;
+
+    const canvas = this.$refs.mobileDrawingCanvas;
+    if (canvas) {
+      canvas.style.pointerEvents = 'auto';
+    }
+    this.provideTactileFeedback();
+    this.$nextTick(() => {
+      this.resizeMobileDrawingCanvas();
+      if (typeof this.resizeLaserCanvas === 'function') {
+        this.resizeLaserCanvas();
+      }
+    });
   },
 
   setDrawingTool(tool) {
@@ -193,6 +267,10 @@ export const drawing = {
 
   startMobileDrawing(e) {
     if (!this.drawing.isDrawingMode) return;
+
+    if (navigator.vibrate) {
+      navigator.vibrate(12);
+    }
 
     this.drawing.isDrawing = true;
     const pos = this.getMobileRelativePosition(e);
@@ -304,6 +382,10 @@ export const drawing = {
     const rect = canvas.getBoundingClientRect();
     const fromPixel = { x: from.x * rect.width, y: from.y * rect.height };
     const toPixel = { x: to.x * rect.width, y: to.y * rect.height };
+    const isMobileCanvas = this.isMobile && canvas === this.$refs.mobileDrawingCanvas;
+    const lineW = isMobileCanvas
+      ? (tool === 'eraser' ? Math.max(width * 2.2, 12) : Math.max(width * 2, 5))
+      : width;
     ctx.save();
     if (tool === 'eraser') {
       ctx.globalCompositeOperation = 'destination-out';
@@ -312,7 +394,7 @@ export const drawing = {
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = color;
     }
-    ctx.lineWidth = width;
+    ctx.lineWidth = lineW;
     ctx.beginPath();
     ctx.moveTo(fromPixel.x, fromPixel.y);
     ctx.lineTo(toPixel.x, toPixel.y);
@@ -362,7 +444,8 @@ export const drawing = {
   clearMobileCanvas() {
     const canvas = this.$refs.mobileDrawingCanvas;
     if (canvas && this.drawing.mobileCtx) {
-      this.drawing.mobileCtx.clearRect(0, 0, canvas.width, canvas.height);
+      const r = canvas.getBoundingClientRect();
+      this.drawing.mobileCtx.clearRect(0, 0, r.width, r.height);
     }
   },
 
