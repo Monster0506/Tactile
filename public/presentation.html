@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Viewer</title>
+    <link rel="stylesheet" href="/css/presentation.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body x-data="presentationApp()" x-init="init()" :class="{ 'mobile-device': isMobile }">
+    <div id="presentationContainer">
+        <!-- Desktop Slide Display -->
+        <div x-show="!isMobile" id="slideDisplay" @click="handleSlideClick" :class="{ 'loading': loading }">
+            <img x-show="currentSlideImage && !slideError" :src="currentSlideImage"
+                :alt="`Slide ${(typeof currentSlide === 'number' && !isNaN(currentSlide) ? currentSlide : 0) + 1}`"
+                @load="loading = false; slideError = false" @error="handleSlideError">
+
+            <!-- Error display for failed slides -->
+            <div x-show="slideError" class="slide-error">
+                <div class="error-icon">📄</div>
+                <div class="error-message">Failed to load slide <span
+                        x-text="(typeof currentSlide === 'number' && !isNaN(currentSlide) ? currentSlide : 0) + 1"></span>
+                </div>
+                <div class="error-details">The slide image could not be loaded</div>
+                <div class="error-url" x-text="currentSlideImage"></div>
+            </div>
+
+            <!-- Loading indicator -->
+            <div x-show="loading && !slideError" class="loading-indicator">
+                <div class="loading-spinner"></div>
+                <div>Loading slide <span
+                        x-text="(typeof currentSlide === 'number' && !isNaN(currentSlide) ? currentSlide : 0) + 1"></span>...
+                </div>
+            </div>
+
+            <canvas x-ref="drawingCanvas" class="drawing-canvas" :class="{ 
+                    'drawing-mode': drawing.isDrawingMode,
+                    'eraser-mode': drawing.currentTool === 'eraser'
+                }"></canvas>
+        </div>
+
+        <!-- Desktop Drawing Toolbar -->
+        <div x-show="!isMobile" class="drawing-toolbar" :class="{ 
+                'visible': drawing.toolbarVisible,
+                'drawing-active': drawing.isDrawingMode 
+            }">
+            <button @click="toggleDrawingMode" class="toolbar-btn toggle-btn"
+                :class="{ 'active': drawing.isDrawingMode }" title="Toggle Drawing Mode">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+            </button>
+
+            <div class="toolbar-separator"></div>
+
+            <button @click="setDrawingTool('pen')" class="toolbar-btn tool-btn"
+                :class="{ 'active': drawing.currentTool === 'pen' }" title="Pen Tool">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+            </button>
+
+            <button @click="setDrawingTool('eraser')" class="toolbar-btn tool-btn"
+                :class="{ 'active': drawing.currentTool === 'eraser' }" title="Eraser Tool">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53l-4.95-4.95l-4.95 4.95z" />
+                </svg>
+            </button>
+
+            <div class="toolbar-separator"></div>
+
+            <div class="color-picker-container">
+                <input type="color" x-model="drawing.currentColor" @change="updateDrawingColor" class="color-picker"
+                    title="Drawing Color">
+                <div class="color-presets">
+                    <template x-for="color in drawing.colorPresets" :key="color">
+                        <button @click="setDrawingColor(color)" class="color-preset"
+                            :style="`background-color: ${color}`" :title="color"></button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="toolbar-separator"></div>
+
+            <div class="brush-size-container">
+                <label class="brush-size-label">Size:</label>
+                <input type="range" x-model="drawing.currentWidth" @input="updateBrushSize" class="brush-size-slider"
+                    min="1" max="20" title="Brush Size">
+                <span x-text="drawing.currentWidth" class="brush-size-value"></span>
+            </div>
+
+            <div class="toolbar-separator"></div>
+
+            <button @click="clearDrawings" class="toolbar-btn clear-btn" title="Clear All Drawings">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Desktop UI Elements -->
+        <div x-show="!isMobile" id="slideCounter">
+            <span x-text="(typeof currentSlide === 'number' && !isNaN(currentSlide) ? currentSlide : 0) + 1">1</span> /
+            <span x-text="totalSlides">1</span>
+        </div>
+
+        <div x-show="!isMobile" id="connectionStatus">
+            <span id="statusIndicator" :class="{ 'disconnected': !isConnected }">●</span>
+            <span x-text="isConnected ? 'Connected' : 'Disconnected'">Connected</span>
+            <span x-text="clientCount" class="client-count">1</span>
+        </div>
+
+        <div x-show="!isMobile && hintsVisible" id="navigationHints" :class="{ 'show': hintsVisible }">
+            ← → Arrow keys • Space • PgUp/PgDn • Click • F for fullscreen
+        </div>
+
+        <!-- Mobile Controller Interface -->
+        <div x-show="isMobile" id="mobileController" class="mobile-only">
+            <div class="mobile-header">
+                <div x-text="presentationData?.title || 'Presentation'" class="presentation-title"></div>
+                <div class="slide-info">
+                    <span
+                        x-text="(typeof currentSlide === 'number' && !isNaN(currentSlide) ? currentSlide : 0) + 1">1</span>
+                    / <span x-text="totalSlides">1</span>
+                </div>
+            </div>
+
+            <div class="mobile-slide-preview" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+                <img x-show="currentSlideImage" :src="currentSlideImage"
+                    :alt="`Slide ${(typeof currentSlide === 'number' && !isNaN(currentSlide) ? currentSlide : 0) + 1}`"
+                    id="mobileSlidePreview">
+            </div>
+
+            <div class="mobile-controls">
+                <button @click="previousSlide" :disabled="currentSlide === 0" class="nav-btn prev-btn"
+                    aria-label="Previous slide">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                    </svg>
+                </button>
+
+                <div class="control-center">
+                    <button @click="provideTactileFeedback" class="play-pause-btn" aria-label="Play/Pause">
+                        <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </button>
+
+                    <button @click="toggleLaserPointer" :class="{ 'active': isLaserActive }" class="laser-btn"
+                        aria-label="Laser pointer">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M12 1v6m0 10v6m11-7h-6m-10 0H1m15.5-6.5l-4.24 4.24M7.76 7.76L3.52 3.52m12.96 12.96l-4.24-4.24M7.76 16.24l-4.24 4.24" />
+                        </svg>
+                    </button>
+                </div>
+
+                <button @click="nextSlide" :disabled="currentSlide >= totalSlides - 1" class="nav-btn next-btn"
+                    aria-label="Next slide">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="mobile-status">
+                <div class="connection-indicator">
+                    <span :class="{ 'disconnected': !isConnected }" id="mobileStatusIndicator">●</span>
+                    <span x-text="isConnected ? 'Connected' : 'Disconnected'">Connected</span>
+                </div>
+                <div class="client-info">
+                    <span x-text="clientCount">1</span> device(s) connected
+                </div>
+            </div>
+
+            <!-- Mobile Drawing Controls -->
+            <div x-show="drawing.mobileControlsVisible" class="mobile-drawing-controls"
+                :class="{ 'visible': drawing.mobileControlsVisible }">
+                <div class="mobile-drawing-header">
+                    <button @click="toggleMobileDrawing" :class="{ 'active': drawing.isDrawingMode }"
+                        class="mobile-tool-btn toggle-btn" title="Toggle Drawing">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                        </svg>
+                    </button>
+                    <span class="mobile-drawing-title">Drawing Tools</span>
+                </div>
+
+                <div class="mobile-drawing-toolbar">
+                    <button @click="setDrawingTool('pen')" :class="{ 'active': drawing.currentTool === 'pen' }"
+                        class="mobile-tool-btn" title="Pen">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                        </svg>
+                    </button>
+
+                    <button @click="setDrawingTool('eraser')" :class="{ 'active': drawing.currentTool === 'eraser' }"
+                        class="mobile-tool-btn" title="Eraser">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53l-4.95-4.95l-4.95 4.95z" />
+                        </svg>
+                    </button>
+
+                    <div class="mobile-color-picker">
+                        <input type="color" x-model="drawing.currentColor" @change="updateDrawingColor" title="Color">
+                    </div>
+
+                    <button @click="clearDrawings" class="mobile-tool-btn clear-btn" title="Clear">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function presentationApp() {
+            return {
+                // Core state
+                socket: null,
+                presentationId: '',
+                currentSlide: 0, // Always initialize to 0
+                totalSlides: 0,
+                slides: [],
+                presentationData: null,
+                loading: false,
+                slideError: false,
+                isConnected: false,
+                clientCount: 1,
+                isMobile: false,
+                isLaserActive: false,
+                hintsVisible: false,
+
+                // Touch handling
+                touchStartX: 0,
+                touchStartY: 0,
+                touchStartTime: 0,
+
+                // Drawing state
+                drawing: {
+                    isDrawingMode: false,
+                    toolbarVisible: false,
+                    mobileControlsVisible: false,
+                    currentTool: 'pen',
+                    currentColor: '#ff0000',
+                    currentWidth: 3,
+                    colorPresets: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff', '#000000'],
+                    isDrawing: false,
+                    currentStroke: null,
+                    slideDrawings: new Map(),
+                    tempStrokes: new Map(),
+                    lastPoint: null
+                },
+
+                // Computed properties
+                get currentSlideImage() {
+                    // Ensure currentSlide is always a valid number
+                    const slideIndex = typeof this.currentSlide === 'number' && this.currentSlide >= 0 ? this.currentSlide : 0;
+
+                    // Ensure we have valid slides array
+                    if (!this.slides || !Array.isArray(this.slides) || this.slides.length === 0) {
+                        console.log('No slides available, slides:', this.slides);
+                        return '';
+                    }
+
+                    // Ensure slide index is within bounds
+                    if (slideIndex >= this.slides.length) {
+                        console.log('Slide index out of bounds:', slideIndex, 'Total slides:', this.slides.length);
+                        return '';
+                    }
+
+                    const slide = this.slides[slideIndex];
+                    if (!slide) {
+                        console.log('No slide data for index:', slideIndex, 'Total slides:', this.slides.length);
+                        return '';
+                    }
+
+                    console.log('Current slide data:', slide);
+
+                    // The slide data structure uses 'imageUrl' property
+                    let imageUrl = '';
+
+                    if (slide.imageUrl) {
+                        imageUrl = slide.imageUrl;
+                    } else if (slide.url) {
+                        imageUrl = slide.url;
+                    } else if (slide.path) {
+                        imageUrl = slide.path;
+                    } else if (slide.image) {
+                        imageUrl = slide.image;
+                    } else if (slide.src) {
+                        imageUrl = slide.src;
+                    } else if (slide.filename) {
+                        imageUrl = `/slides/${slide.filename}`;
+                    } else if (typeof slide === 'string') {
+                        // If slide is just a string (filename or path)
+                        imageUrl = slide.startsWith('/') ? slide : `/slides/${slide}`;
+                    }
+
+                    console.log('Resolved image URL:', imageUrl);
+                    return imageUrl;
+                },
+
+                // Initialization
+                init() {
+                    this.detectDevice();
+                    this.presentationId = this.getPresentationId();
+                    this.setupSocket();
+                    this.setupKeyboardNavigation();
+                    this.setupNavigationHints();
+                    this.loadPresentation();
+                    this.startConnectionHealthCheck();
+
+                    // Initialize drawing after DOM is ready
+                    this.$nextTick(() => {
+                        this.initializeDrawing();
+                    });
+                },
+
+                detectDevice() {
+                    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                    const isSmallScreen = window.innerWidth <= 768;
+                    const userAgent = navigator.userAgent.toLowerCase();
+                    const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+
+                    this.isMobile = isMobileUA || (isTouchDevice && isSmallScreen);
+
+                    if (this.isMobile) {
+                        this.drawing.mobileControlsVisible = true;
+                        this.preventZoom();
+                    }
+                },
+
+                preventZoom() {
+                    document.addEventListener('touchstart', (e) => {
+                        if (e.touches.length > 1) {
+                            e.preventDefault();
+                        }
+                    }, { passive: false });
+
+                    let lastTouchEnd = 0;
+                    document.addEventListener('touchend', (e) => {
+                        const now = Date.now();
+                        if (now - lastTouchEnd <= 300) {
+                            e.preventDefault();
+                        }
+                        lastTouchEnd = now;
+                    }, false);
+                },
+
+                getPresentationId() {
+                    return window.location.pathname.split('/').pop();
+                },
+
+                setupSocket() {
+                    console.log('🔌 SETTING UP SOCKET CONNECTION');
+                    this.socket = io();
+
+                    this.socket.on('connect', () => {
+                        console.log('✅ Connected to server');
+                        this.isConnected = true;
+                        if (this.presentationId && this.presentationData) {
+                            console.log('🔄 Auto-rejoining presentation after reconnect');
+                            this.joinPresentation();
+                        }
+                    });
+
+                    this.socket.on('disconnect', () => {
+                        console.log('❌ Disconnected from server');
+                        this.isConnected = false;
+                    });
+
+                    this.socket.on('session-joined', (data) => {
+                        console.log('🎯 Joined presentation session:', data);
+                        console.log('Session data - sessionId:', data.sessionId, 'currentSlide:', data.currentSlide, 'clientCount:', data.clientCount);
+
+                        // Ensure currentSlide is always a valid number
+                        const newSlide = typeof data.currentSlide === 'number' && data.currentSlide >= 0 ? data.currentSlide : 0;
+                        console.log('Setting currentSlide from session:', newSlide);
+
+                        if (newSlide !== this.currentSlide) {
+                            console.log('🔄 Updating currentSlide from', this.currentSlide, 'to', newSlide);
+                            this.currentSlide = newSlide;
+                            this.displaySlide(this.currentSlide);
+                        }
+                        this.clientCount = data.clientCount || 1;
+                    });
+
+                    this.socket.on('slide-updated', (data) => {
+                        console.log('🔄 Slide updated by another client:', data);
+                        console.log('Remote slide update - slideIndex:', data.slideIndex, 'current:', this.currentSlide);
+
+                        if (typeof data.slideIndex === 'number' && data.slideIndex !== this.currentSlide) {
+                            console.log('🔄 Applying remote slide change from', this.currentSlide, 'to', data.slideIndex);
+                            this.currentSlide = data.slideIndex;
+                            this.displaySlide(this.currentSlide);
+                        }
+                    });
+
+                    this.socket.on('client-connected', (data) => {
+                        console.log('👤 Client connected:', data);
+                        this.clientCount = data.clientCount;
+                    });
+
+                    this.socket.on('client-disconnected', (data) => {
+                        console.log('👤 Client disconnected:', data);
+                        this.clientCount = data.clientCount;
+                    });
+
+                    this.socket.on('laser-position', (data) => {
+                        this.updateLaserPointer(data.x, data.y, data.active);
+                    });
+
+                    this.socket.on('drawing-start', (data) => {
+                        this.handleRemoteDrawingStart(data);
+                    });
+
+                    this.socket.on('drawing-move', (data) => {
+                        this.handleRemoteDrawingMove(data);
+                    });
+
+                    this.socket.on('drawing-end', (data) => {
+                        this.handleRemoteDrawingEnd(data);
+                    });
+
+                    this.socket.on('drawing-clear', (data) => {
+                        this.handleRemoteDrawingClear(data);
+                    });
+
+                    this.socket.on('error', (data) => {
+                        console.error('🚨 SOCKET ERROR RECEIVED 🚨');
+                        console.error('Error timestamp:', new Date().toISOString());
+                        console.error('Error data:', data);
+                        console.error('Error message:', data.message);
+                        console.error('Error type:', typeof data);
+                        console.error('Full error object:', JSON.stringify(data));
+                        console.error('Current app state:');
+                        console.error('  - presentationId:', this.presentationId);
+                        console.error('  - currentSlide:', this.currentSlide);
+                        console.error('  - totalSlides:', this.totalSlides);
+                        console.error('  - isConnected:', this.isConnected);
+                        console.error('  - socket.connected:', this.socket?.connected);
+                        console.error('  - presentationData loaded:', !!this.presentationData);
+
+                        // Check if this error is related to slide updates
+                        if (data.message && data.message.includes('slide')) {
+                            console.error('🎯 This appears to be a SLIDE-RELATED error');
+                            console.error('🔍 Possible causes:');
+                            console.error('   1. Server trying to process old slide change events');
+                            console.error('   2. Session validation failing on server side');
+                            console.error('   3. Race condition during connection setup');
+                            console.error('   4. Server-side cleanup issue from previous session');
+                        }
+
+                        // Get stack trace to see what triggered this error
+                        console.error('Stack trace:', new Error().stack);
+
+                        this.showError(data.message || 'Connection error occurred');
+                    });
+
+                    console.log('🔌 Socket event listeners registered');
+                },
+
+                setupKeyboardNavigation() {
+                    document.addEventListener('keydown', (e) => {
+                        switch (e.key) {
+                            case 'ArrowRight':
+                            case ' ':
+                            case 'PageDown':
+                                e.preventDefault();
+                                this.nextSlide();
+                                break;
+                            case 'ArrowLeft':
+                            case 'PageUp':
+                                e.preventDefault();
+                                this.previousSlide();
+                                break;
+                            case 'Escape':
+                                e.preventDefault();
+                                this.exitFullscreen();
+                                break;
+                            case 'f':
+                            case 'F':
+                                e.preventDefault();
+                                this.toggleFullscreen();
+                                break;
+                        }
+                    });
+                },
+
+                setupNavigationHints() {
+                    // Show hints on page load
+                    setTimeout(() => {
+                        this.hintsVisible = true;
+                    }, 1000);
+
+                    // Hide hints after 5 seconds
+                    setTimeout(() => {
+                        this.hintsVisible = false;
+                    }, 6000);
+
+                    // Show hints on mouse movement, hide after inactivity
+                    let hintTimeout;
+                    document.addEventListener('mousemove', () => {
+                        this.hintsVisible = true;
+                        clearTimeout(hintTimeout);
+                        hintTimeout = setTimeout(() => {
+                            this.hintsVisible = false;
+                        }, 3000);
+                    });
+
+                    // Show hints on any key press
+                    document.addEventListener('keydown', () => {
+                        this.hintsVisible = true;
+                        clearTimeout(hintTimeout);
+                        hintTimeout = setTimeout(() => {
+                            this.hintsVisible = false;
+                        }, 3000);
+                    });
+                },
+
+                async loadPresentation() {
+                    if (!this.presentationId) {
+                        this.showError('No presentation ID found in URL');
+                        return;
+                    }
+
+                    try {
+                        this.loading = true;
+                        const response = await fetch(`/api/presentation/${this.presentationId}`);
+
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                this.showError('Presentation not found');
+                            } else {
+                                this.showError('Failed to load presentation');
+                            }
+                            return;
+                        }
+
+                        this.presentationData = await response.json();
+                        this.slides = this.presentationData.slides;
+                        this.totalSlides = this.presentationData.totalSlides;
+
+                        document.title = `${this.presentationData.title} - Presentation Viewer`;
+
+                        this.displaySlide(0);
+                        this.joinPresentation();
+
+                    } catch (error) {
+                        console.error('Error loading presentation:', error);
+                        this.showError('Failed to load presentation');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                joinPresentation() {
+                    console.log('=== JOIN PRESENTATION ATTEMPT ===');
+                    console.log('Presentation ID:', this.presentationId);
+                    console.log('Socket connected:', this.socket?.connected);
+                    console.log('Presentation data loaded:', !!this.presentationData);
+
+                    if (this.presentationId) {
+                        const deviceType = this.isMobile ? 'mobile' : 'desktop';
+                        const joinData = {
+                            presentationId: this.presentationId,
+                            deviceType: deviceType
+                        };
+
+                        console.log('Emitting join-presentation with data:', joinData);
+                        this.socket.emit('join-presentation', joinData);
+                        console.log('Join-presentation event emitted');
+                    } else {
+                        console.error('❌ Cannot join presentation - no presentation ID');
+                    }
+                    console.log('=== END JOIN PRESENTATION ATTEMPT ===');
+                },
+
+                displaySlide(slideIndex) {
+                    this.currentSlide = slideIndex;
+                    this.loading = true;
+                    this.slideError = false; // Reset error state when changing slides
+                    // Loading will be set to false when image loads
+
+                    // Redraw drawings for new slide
+                    setTimeout(() => this.redrawCurrentSlide(), 100);
+                },
+
+                nextSlide() {
+                    console.log('=== NEXT SLIDE ATTEMPT ===');
+                    console.log('Current state - currentSlide:', this.currentSlide, 'totalSlides:', this.totalSlides);
+                    console.log('Socket connected:', this.socket?.connected, 'isConnected:', this.isConnected);
+                    console.log('Presentation ID:', this.presentationId);
+
+                    // Check if we're properly connected and have a session
+                    if (!this.socket || !this.socket.connected) {
+                        console.error('❌ Cannot navigate - socket not connected');
+                        return;
+                    }
+
+                    if (!this.presentationId) {
+                        console.error('❌ Cannot navigate - no presentation ID');
+                        return;
+                    }
+
+                    if (this.currentSlide < this.totalSlides - 1) {
+                        const newSlide = this.currentSlide + 1;
+                        console.log('Calculated newSlide:', newSlide);
+
+                        // Validate the new slide index
+                        if (typeof newSlide === 'number' && newSlide >= 0 && newSlide < this.totalSlides) {
+                            console.log('✅ Validation passed - emitting slide-change event');
+                            console.log('Emitting slide-change with data:', { slideIndex: newSlide });
+
+                            // Add a timeout to see if we get a response
+                            const emitTime = Date.now();
+                            this.socket.emit('slide-change', { slideIndex: newSlide });
+                            console.log('Slide-change event emitted at:', emitTime);
+
+                            this.displaySlide(newSlide);
+                            this.provideTactileFeedback();
+                        } else {
+                            console.error('❌ Invalid slide index for next slide:', newSlide, 'Type:', typeof newSlide);
+                        }
+                    } else {
+                        console.log('❌ Cannot go to next slide - already at last slide');
+                    }
+                    console.log('=== END NEXT SLIDE ATTEMPT ===');
+                },
+
+                previousSlide() {
+                    console.log('=== PREVIOUS SLIDE ATTEMPT ===');
+                    console.log('Current state - currentSlide:', this.currentSlide, 'totalSlides:', this.totalSlides);
+                    console.log('Socket connected:', this.socket?.connected, 'isConnected:', this.isConnected);
+                    console.log('Presentation ID:', this.presentationId);
+
+                    // Check if we're properly connected and have a session
+                    if (!this.socket || !this.socket.connected) {
+                        console.error('❌ Cannot navigate - socket not connected');
+                        return;
+                    }
+
+                    if (!this.presentationId) {
+                        console.error('❌ Cannot navigate - no presentation ID');
+                        return;
+                    }
+
+                    if (this.currentSlide > 0) {
+                        const newSlide = this.currentSlide - 1;
+                        console.log('Calculated newSlide:', newSlide);
+
+                        // Validate the new slide index
+                        if (typeof newSlide === 'number' && newSlide >= 0 && newSlide < this.totalSlides) {
+                            console.log('✅ Validation passed - emitting slide-change event');
+                            console.log('Emitting slide-change with data:', { slideIndex: newSlide });
+
+                            // Add a timeout to see if we get a response
+                            const emitTime = Date.now();
+                            this.socket.emit('slide-change', { slideIndex: newSlide });
+                            console.log('Slide-change event emitted at:', emitTime);
+
+                            this.displaySlide(newSlide);
+                            this.provideTactileFeedback();
+                        } else {
+                            console.error('❌ Invalid slide index for previous slide:', newSlide, 'Type:', typeof newSlide);
+                        }
+                    } else {
+                        console.log('❌ Cannot go to previous slide - already at first slide');
+                    }
+                    console.log('=== END PREVIOUS SLIDE ATTEMPT ===');
+                },
+
+                handleSlideClick(e) {
+                    if (this.drawing.isDrawingMode) return;
+
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const width = rect.width;
+
+                    if (clickX > width / 2) {
+                        this.nextSlide();
+                    } else {
+                        this.previousSlide();
+                    }
+                },
+
+                handleSlideError() {
+                    this.loading = false;
+                    this.slideError = true;
+                    console.error(`Failed to load slide ${this.currentSlide + 1}`, 'URL:', this.currentSlideImage);
+                },
+
+                // Touch handling for mobile
+                handleTouchStart(e) {
+                    const touch = e.touches[0];
+                    this.touchStartX = touch.clientX;
+                    this.touchStartY = touch.clientY;
+                    this.touchStartTime = Date.now();
+                },
+
+                handleTouchEnd(e) {
+                    if (e.touches.length > 0) return;
+
+                    const touch = e.changedTouches[0];
+                    const touchEndX = touch.clientX;
+                    const touchEndY = touch.clientY;
+                    const touchEndTime = Date.now();
+
+                    const deltaX = touchEndX - this.touchStartX;
+                    const deltaY = touchEndY - this.touchStartY;
+                    const deltaTime = touchEndTime - this.touchStartTime;
+
+                    const minSwipeDistance = 50;
+                    const maxSwipeTime = 500;
+                    const maxVerticalDistance = 100;
+
+                    if (deltaTime < maxSwipeTime && Math.abs(deltaY) < maxVerticalDistance) {
+                        if (deltaX > minSwipeDistance) {
+                            this.previousSlide();
+                            this.showSwipeFeedback('right');
+                        } else if (deltaX < -minSwipeDistance) {
+                            this.nextSlide();
+                            this.showSwipeFeedback('left');
+                        }
+                    }
+                },
+
+                showSwipeFeedback(direction) {
+                    const slidePreview = document.querySelector('.mobile-slide-preview');
+                    if (!slidePreview) return;
+
+                    const feedback = document.createElement('div');
+                    feedback.className = `swipe-feedback ${direction}`;
+                    feedback.textContent = direction === 'left' ? '→' : '←';
+
+                    slidePreview.appendChild(feedback);
+
+                    setTimeout(() => {
+                        if (feedback.parentNode) {
+                            feedback.parentNode.removeChild(feedback);
+                        }
+                    }, 300);
+                },
+
+                toggleLaserPointer() {
+                    this.isLaserActive = !this.isLaserActive;
+                    this.socket.emit('laser-pointer', {
+                        x: 0.5,
+                        y: 0.5,
+                        active: this.isLaserActive
+                    });
+                    this.provideTactileFeedback();
+                },
+
+                provideTactileFeedback() {
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                },
+
+                toggleFullscreen() {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.log('Error attempting to enable fullscreen:', err);
+                        });
+                    } else {
+                        document.exitFullscreen();
+                    }
+                },
+
+                exitFullscreen() {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    }
+                },
+
+                updateLaserPointer(x, y, active) {
+                    // TODO: Implement laser pointer visualization
+                    console.log('Laser pointer:', { x, y, active });
+                },
+
+                startConnectionHealthCheck() {
+                    setInterval(() => {
+                        if (this.socket && this.socket.connected) {
+                            this.socket.emit('ping');
+                        }
+                    }, 30000);
+                },
+
+                showError(message) {
+                    // For now, just log the error. Could be enhanced with a proper error display
+                    console.error('Presentation error:', message);
+                },
+
+                // Drawing methods
+                initializeDrawing() {
+                    if (!this.$refs.drawingCanvas) return;
+
+                    const canvas = this.$refs.drawingCanvas;
+                    this.drawing.ctx = canvas.getContext('2d');
+                    this.setupDrawingCanvas();
+                    this.setupDrawingEvents();
+                },
+
+                setupDrawingCanvas() {
+                    const canvas = this.$refs.drawingCanvas;
+                    if (!canvas) return;
+
+                    this.resizeDrawingCanvas();
+
+                    this.drawing.ctx.lineCap = 'round';
+                    this.drawing.ctx.lineJoin = 'round';
+                    this.drawing.ctx.globalCompositeOperation = 'source-over';
+
+                    window.addEventListener('resize', () => this.resizeDrawingCanvas());
+                },
+
+                resizeDrawingCanvas() {
+                    const canvas = this.$refs.drawingCanvas;
+                    const slideDisplay = document.getElementById('slideDisplay');
+                    if (!canvas || !slideDisplay) return;
+
+                    const rect = slideDisplay.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+
+                    this.redrawCurrentSlide();
+                },
+
+                setupDrawingEvents() {
+                    const canvas = this.$refs.drawingCanvas;
+                    if (!canvas) return;
+
+                    // Mouse events
+                    canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+                    canvas.addEventListener('mousemove', (e) => this.draw(e));
+                    canvas.addEventListener('mouseup', () => this.stopDrawing());
+                    canvas.addEventListener('mouseout', () => this.stopDrawing());
+
+                    // Touch events
+                    canvas.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const mouseEvent = new MouseEvent('mousedown', {
+                            clientX: touch.clientX,
+                            clientY: touch.clientY
+                        });
+                        canvas.dispatchEvent(mouseEvent);
+                    });
+
+                    canvas.addEventListener('touchmove', (e) => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const mouseEvent = new MouseEvent('mousemove', {
+                            clientX: touch.clientX,
+                            clientY: touch.clientY
+                        });
+                        canvas.dispatchEvent(mouseEvent);
+                    });
+
+                    canvas.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        const mouseEvent = new MouseEvent('mouseup', {});
+                        canvas.dispatchEvent(mouseEvent);
+                    });
+                },
+
+                toggleDrawingMode() {
+                    this.drawing.isDrawingMode = !this.drawing.isDrawingMode;
+                    this.drawing.toolbarVisible = this.drawing.isDrawingMode;
+
+                    const canvas = this.$refs.drawingCanvas;
+                    if (canvas) {
+                        canvas.style.pointerEvents = this.drawing.isDrawingMode ? 'auto' : 'none';
+                    }
+
+                    if (!this.drawing.isDrawingMode) {
+                        this.stopDrawing();
+                    }
+                },
+
+                toggleMobileDrawing() {
+                    this.drawing.isDrawingMode = !this.drawing.isDrawingMode;
+                    this.provideTactileFeedback();
+                },
+
+                setDrawingTool(tool) {
+                    this.drawing.currentTool = tool;
+                },
+
+                setDrawingColor(color) {
+                    this.drawing.currentColor = color;
+                },
+
+                updateDrawingColor() {
+                    // Color is already updated via x-model
+                },
+
+                updateBrushSize() {
+                    // Size is already updated via x-model
+                },
+
+                getRelativePosition(e) {
+                    const canvas = this.$refs.drawingCanvas;
+                    const rect = canvas.getBoundingClientRect();
+                    return {
+                        x: (e.clientX - rect.left) / rect.width,
+                        y: (e.clientY - rect.top) / rect.height
+                    };
+                },
+
+                startDrawing(e) {
+                    if (!this.drawing.isDrawingMode) return;
+
+                    this.drawing.isDrawing = true;
+                    const pos = this.getRelativePosition(e);
+                    this.drawing.lastPoint = pos;
+
+                    this.drawing.currentStroke = {
+                        id: this.generateStrokeId(),
+                        slideId: this.getCurrentSlideId(),
+                        points: [pos],
+                        color: this.drawing.currentColor,
+                        width: this.drawing.currentWidth,
+                        tool: this.drawing.currentTool,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    this.socket.emit('drawing-start', {
+                        strokeId: this.drawing.currentStroke.id,
+                        slideId: this.drawing.currentStroke.slideId,
+                        x: pos.x,
+                        y: pos.y,
+                        color: this.drawing.currentColor,
+                        width: this.drawing.currentWidth,
+                        tool: this.drawing.currentTool
+                    });
+                },
+
+                draw(e) {
+                    if (!this.drawing.isDrawing || !this.drawing.isDrawingMode || !this.drawing.currentStroke) return;
+
+                    const pos = this.getRelativePosition(e);
+                    this.drawing.currentStroke.points.push(pos);
+
+                    this.drawLine(this.drawing.lastPoint, pos, this.drawing.currentColor, this.drawing.currentWidth, this.drawing.currentTool);
+                    this.drawing.lastPoint = pos;
+
+                    this.socket.emit('drawing-move', {
+                        strokeId: this.drawing.currentStroke.id,
+                        x: pos.x,
+                        y: pos.y
+                    });
+                },
+
+                stopDrawing() {
+                    if (!this.drawing.isDrawing || !this.drawing.currentStroke) return;
+
+                    this.drawing.isDrawing = false;
+
+                    const slideId = this.getCurrentSlideId();
+                    if (!this.drawing.slideDrawings.has(slideId)) {
+                        this.drawing.slideDrawings.set(slideId, []);
+                    }
+                    this.drawing.slideDrawings.get(slideId).push(this.drawing.currentStroke);
+
+                    this.socket.emit('drawing-end', {
+                        strokeId: this.drawing.currentStroke.id,
+                        strokeData: this.drawing.currentStroke
+                    });
+
+                    this.drawing.currentStroke = null;
+                    this.drawing.lastPoint = null;
+                },
+
+                drawLine(from, to, color, width, tool) {
+                    const canvas = this.$refs.drawingCanvas;
+                    const rect = canvas.getBoundingClientRect();
+                    const fromPixel = {
+                        x: from.x * rect.width,
+                        y: from.y * rect.height
+                    };
+                    const toPixel = {
+                        x: to.x * rect.width,
+                        y: to.y * rect.height
+                    };
+
+                    this.drawing.ctx.save();
+
+                    if (tool === 'eraser') {
+                        this.drawing.ctx.globalCompositeOperation = 'destination-out';
+                        this.drawing.ctx.strokeStyle = 'rgba(0,0,0,1)';
+                    } else {
+                        this.drawing.ctx.globalCompositeOperation = 'source-over';
+                        this.drawing.ctx.strokeStyle = color;
+                    }
+
+                    this.drawing.ctx.lineWidth = width;
+                    this.drawing.ctx.beginPath();
+                    this.drawing.ctx.moveTo(fromPixel.x, fromPixel.y);
+                    this.drawing.ctx.lineTo(toPixel.x, toPixel.y);
+                    this.drawing.ctx.stroke();
+
+                    this.drawing.ctx.restore();
+                },
+
+                drawStroke(stroke) {
+                    if (!stroke.points || stroke.points.length < 2) return;
+
+                    for (let i = 1; i < stroke.points.length; i++) {
+                        this.drawLine(
+                            stroke.points[i - 1],
+                            stroke.points[i],
+                            stroke.color,
+                            stroke.width,
+                            stroke.tool
+                        );
+                    }
+                },
+
+                redrawCurrentSlide() {
+                    if (!this.drawing.ctx) return;
+
+                    this.clearCanvas();
+                    const slideId = this.getCurrentSlideId();
+                    const strokes = this.drawing.slideDrawings.get(slideId) || [];
+                    strokes.forEach(stroke => this.drawStroke(stroke));
+                },
+
+                clearCanvas() {
+                    const canvas = this.$refs.drawingCanvas;
+                    if (canvas && this.drawing.ctx) {
+                        this.drawing.ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                },
+
+                clearDrawings() {
+                    const slideId = this.getCurrentSlideId();
+                    this.drawing.slideDrawings.set(slideId, []);
+                    this.clearCanvas();
+                    this.socket.emit('drawing-clear', { slideId });
+                },
+
+                getCurrentSlideId() {
+                    return `slide-${this.currentSlide}`;
+                },
+
+                generateStrokeId() {
+                    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+                },
+
+                // Remote drawing handlers
+                handleRemoteDrawingStart(data) {
+                    const stroke = {
+                        id: data.strokeId,
+                        slideId: data.slideId,
+                        points: [{ x: data.x, y: data.y }],
+                        color: data.color,
+                        width: data.width,
+                        tool: data.tool,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    this.drawing.tempStrokes.set(data.strokeId, stroke);
+                },
+
+                handleRemoteDrawingMove(data) {
+                    const stroke = this.drawing.tempStrokes.get(data.strokeId);
+                    if (!stroke) return;
+
+                    const lastPoint = stroke.points[stroke.points.length - 1];
+                    const newPoint = { x: data.x, y: data.y };
+
+                    stroke.points.push(newPoint);
+                    this.drawLine(lastPoint, newPoint, stroke.color, stroke.width, stroke.tool);
+                },
+
+                handleRemoteDrawingEnd(data) {
+                    const stroke = this.drawing.tempStrokes.get(data.strokeId);
+                    if (!stroke) return;
+
+                    const slideId = stroke.slideId;
+                    if (!this.drawing.slideDrawings.has(slideId)) {
+                        this.drawing.slideDrawings.set(slideId, []);
+                    }
+                    this.drawing.slideDrawings.get(slideId).push(stroke);
+
+                    this.drawing.tempStrokes.delete(data.strokeId);
+                },
+
+                handleRemoteDrawingClear(data) {
+                    if (data.slideId === this.getCurrentSlideId()) {
+                        this.clearCanvas();
+                    }
+                    this.drawing.slideDrawings.set(data.slideId, []);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

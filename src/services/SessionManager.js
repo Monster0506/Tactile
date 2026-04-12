@@ -123,9 +123,15 @@ class SessionManager {
           deviceType: client?.deviceType
         });
 
-        // Clean up session if no clients remain
+        // Clean up session if no clients remain (with a delay to handle reconnections)
         if (!session.hasConnectedClients()) {
-          this.cleanupSession(sessionId);
+          setTimeout(() => {
+            // Double-check that session still has no clients after delay
+            const currentSession = this.getSession(sessionId);
+            if (currentSession && !currentSession.hasConnectedClients()) {
+              this.cleanupSession(sessionId);
+            }
+          }, 5000); // 5 second delay to handle quick reconnections
         }
       }
     }
@@ -144,6 +150,7 @@ class SessionManager {
   updateSlide(sessionId, slideIndex, initiatorSocketId) {
     const session = this.getSession(sessionId);
     if (!session) {
+      console.error(`Session not found: ${sessionId}`);
       return false;
     }
 
@@ -156,6 +163,8 @@ class SessionManager {
         slideIndex: session.getCurrentSlide(),
         initiatedBy: initiatorSocketId
       });
+    } else {
+      console.error(`Failed to update slide in session ${sessionId}: invalid slideIndex ${slideIndex} (type: ${typeof slideIndex})`);
     }
 
     return updated;

@@ -107,8 +107,11 @@ class Session {
    * @returns {boolean} True if slide was updated, false if invalid index
    */
   updateCurrentSlide(slideIndex) {
-    if (typeof slideIndex === 'number' && slideIndex >= 0) {
-      this.currentSlide = slideIndex;
+    // Convert to number if it's a string representation of a number
+    const numericSlideIndex = typeof slideIndex === 'string' ? parseInt(slideIndex, 10) : slideIndex;
+    
+    if (typeof numericSlideIndex === 'number' && !isNaN(numericSlideIndex) && numericSlideIndex >= 0) {
+      this.currentSlide = numericSlideIndex;
       this.updateLastActivity();
       return true;
     }

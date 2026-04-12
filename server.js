@@ -198,6 +198,7 @@ io.on('connection', (socket) => {
       const sessionId = sessionManager.clientSessions.get(socket.id);
       
       if (!sessionId) {
+        console.error(`No session found for socket ${socket.id}`);
         socket.emit('error', { message: 'Not in a session' });
         return;
       }

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Presentation Viewer</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body>
+    <div class="container" x-data="uploadApp()">
+        <h1>Web Presentation Viewer</h1>
+        <div class="upload-section">
+            <h2>Upload Your Presentation</h2>
+            <form @submit.prevent="uploadFile" enctype="multipart/form-data">
+                <div class="file-input-wrapper">
+                    <input type="file" x-ref="fileInput" name="presentation" accept=".pdf,.ppt,.pptx,.md" required
+                        @change="updateFileName">
+                    <label for="fileInput" x-text="fileName">Choose File</label>
+                </div>
+                <button type="submit" :disabled="uploading">
+                    <span x-show="!uploading">Upload Presentation</span>
+                    <span x-show="uploading">Uploading...</span>
+                </button>
+            </form>
+            <div x-show="status.message" x-text="status.message" :class="status.type" class="upload-status"></div>
+        </div>
+        <div class="supported-formats">
+            <h3>Supported Formats:</h3>
+            <ul>
+                <li>PDF (.pdf)</li>
+                <li>PowerPoint (.ppt, .pptx)</li>
+                <li>Markdown (.md)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function uploadApp() {
+            return {
+                fileName: 'Choose File',
+                uploading: false,
+                status: {
+                    message: '',
+                    type: ''
+                },
+
+                updateFileName() {
+                    const file = this.$refs.fileInput.files[0];
+                    this.fileName = file ? file.name : 'Choose File';
+                },
+
+                async uploadFile() {
+                    const file = this.$refs.fileInput.files[0];
+                    if (!file) {
+                        this.showStatus('Please select a file to upload.', 'error');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('presentation', file);
+
+                    try {
+                        this.uploading = true;
+                        this.showStatus('Uploading and processing file...', 'info');
+
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            this.showStatus('Upload successful! Redirecting to presentation...', 'success');
+                            setTimeout(() => {
+                                window.location.href = result.url;
+                            }, 2000);
+                        } else {
+                            this.showStatus(result.error || 'Upload failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showStatus('Network error. Please try again.', 'error');
+                        console.error('Upload error:', error);
+                    } finally {
+                        this.uploading = false;
+                    }
+                },
+
+                showStatus(message, type) {
+                    this.status = { message, type };
+
+                    if (type === 'success') {
+                        setTimeout(() => {
+                            this.status = { message: '', type: '' };
+                        }, 3000);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
