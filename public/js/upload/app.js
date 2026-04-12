@@ -28,10 +28,26 @@ export function uploadApp() {
 
         const response = await fetch('/upload', {
           method: 'POST',
-          body: formData
+          body: formData,
+          headers: {
+            // ngrok free tier returns HTML interstitial for API calls unless this is set
+            'ngrok-skip-browser-warning': '69420',
+            Accept: 'application/json'
+          }
         });
 
-        const result = await response.json();
+        const raw = await response.text();
+        let result = null;
+        try {
+          result = raw ? JSON.parse(raw) : {};
+        } catch {
+          const hint = raw.trimStart().startsWith('<')
+            ? 'Upload returned a web page instead of data (ngrok warning, timeout, or proxy). Try again; use localhost if it persists.'
+            : `Invalid response (HTTP ${response.status}).`;
+          this.showStatus(hint, 'error');
+          console.error('Upload non-JSON response:', response.status, raw.slice(0, 500));
+          return;
+        }
 
         if (response.ok) {
           this.showStatus('Upload successful! Redirecting to presentation...', 'success');

@@ -86,6 +86,54 @@ class StorageService {
   }
 
   /**
+   * If in-memory slides are empty but PNGs exist on disk (e.g. bad save / manual copy), rebuild metadata and persist.
+   * @param {string} presentationId
+   * @returns {Promise<Presentation|null>}
+   */
+  async rehydrateSlidesFromDiskIfEmpty(presentationId) {
+    const presentation = this.presentations.get(presentationId);
+    if (!presentation || !Array.isArray(presentation.slides) || presentation.slides.length > 0) {
+      return presentation || null;
+    }
+
+    const dir = path.join(this.slidesDirectory, presentationId);
+    let files;
+    try {
+      files = await fs.readdir(dir);
+    } catch {
+      return presentation;
+    }
+
+    const re = /^slide-(\d+)\.png$/;
+    const nums = files
+      .map((f) => {
+        const m = re.exec(f);
+        return m ? parseInt(m[1], 10) : null;
+      })
+      .filter((n) => n != null)
+      .sort((a, b) => a - b);
+
+    if (nums.length === 0) {
+      return presentation;
+    }
+
+    presentation.slides = nums.map((n) => ({
+      id: `slide-${n}`,
+      imageUrl: `/slides/${presentationId}/slide-${n}.png`,
+      thumbnailUrl: `/slides/${presentationId}/thumb-${n}.png`,
+      order: n
+    }));
+
+    try {
+      await this.savePresentation(presentation);
+    } catch (err) {
+      console.error('rehydrateSlidesFromDiskIfEmpty: save failed', err);
+    }
+
+    return presentation;
+  }
+
+  /**
    * Get all presentations
    * @returns {Promise<Array>} Array of presentations
    */

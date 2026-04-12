@@ -507,23 +507,6 @@ body.mobile-device #slideDisplay {
     display: none !important;
 }
 
-/* Ensure desktop elements are visible on desktop */
-body:not(.mobile-device) #slideDisplay {
-    display: flex !important;
-}
-
-body:not(.mobile-device) #slideCounter {
-    display: block !important;
-}
-
-body:not(.mobile-device) #connectionStatus {
-    display: flex !important;
-}
-
-body:not(.mobile-device) #navigationHints {
-    display: block !important;
-}
-
 /*
  * Must override body.mobile-device .mobile-only { display: block !important },
  * or the slide column never gets height and nothing centers vertically.

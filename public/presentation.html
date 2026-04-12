@@ -18,7 +18,7 @@
         <div id="slideDisplay" @click="handleSlideClick"
              @mousemove="onLaserPointerMove($event)"
              @touchmove.prevent="onLaserTouchMove($event)">
-            <div x-show="currentSlideImage && !slideError" class="slide-image-stack">
+            <div x-show="showSlideStack && !slideError" class="slide-image-stack">
                 <img class="slide-layer" :class="{ 'slide-layer-visible': slideActiveLayer === 0 }"
                     :src="slideLayerUrl0" :alt="`Slide ${displaySlideNumber}`"
                     @load="slideError = false; onSlideLayerLoad(0)" @error="handleSlideLayerError">
@@ -79,7 +79,7 @@
                     'mobile-drawing-active': drawing.isDrawingMode
                 }">
                 <div class="mobile-slide-media">
-                    <div x-show="currentSlideImage" class="slide-image-stack slide-image-stack--mobile">
+                    <div x-show="showSlideStack" class="slide-image-stack slide-image-stack--mobile">
                         <img class="slide-layer" :class="{ 'slide-layer-visible': slideActiveLayer === 0 }"
                             :src="slideLayerUrl0" :alt="`Slide ${displaySlideNumber}`"
                             @load="slideError = false; onSlideLayerLoad(0)" @error="handleSlideLayerError">

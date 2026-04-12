@@ -77,10 +77,19 @@ export const navigation = {
       }
 
       this.presentationData = await response.json();
-      this.slides = this.presentationData.slides;
-      this.totalSlides = this.presentationData.totalSlides;
+      this.slides = Array.isArray(this.presentationData.slides)
+        ? this.presentationData.slides
+        : [];
+      this.totalSlides = this.slides.length;
 
       document.title = `${this.presentationData.title} - Presentation Viewer`;
+
+      // Fresh crossfade state so the first paint always fills the visible layer (avoids race with empty slides)
+      this.slideLayersReady = false;
+      this.slideLayerUrl0 = '';
+      this.slideLayerUrl1 = EMPTY_IMG_DATA_URL;
+      this.slideActiveLayer = 0;
+      this.slideError = false;
 
       this.displaySlide(0);
       this.joinPresentation();
@@ -129,7 +138,20 @@ export const navigation = {
       const activeUrl = active === 0 ? this.slideLayerUrl0 : this.slideLayerUrl1;
       const hiddenUrl = hidden === 0 ? this.slideLayerUrl0 : this.slideLayerUrl1;
 
-      if (url && url === activeUrl) {
+      // Recover broken crossfade: URL ended up on the hidden layer while the visible layer is still empty
+      if (
+        url &&
+        url !== EMPTY_IMG_DATA_URL &&
+        (activeUrl === '' || activeUrl === EMPTY_IMG_DATA_URL)
+      ) {
+        if (active === 0) {
+          this.slideLayerUrl0 = url;
+          this.slideLayerUrl1 = EMPTY_IMG_DATA_URL;
+        } else {
+          this.slideLayerUrl1 = url;
+          this.slideLayerUrl0 = EMPTY_IMG_DATA_URL;
+        }
+      } else if (url && url === activeUrl) {
         // Already showing this asset
       } else if (url && url === hiddenUrl && url !== EMPTY_IMG_DATA_URL) {
         this.slideActiveLayer = hidden;

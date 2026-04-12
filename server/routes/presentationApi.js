@@ -2,11 +2,14 @@ function registerPresentationApiRoutes(app, { storageService }) {
   app.get('/api/presentation/:id', async (req, res) => {
     try {
       const presentationId = req.params.id;
-      const presentation = await storageService.getPresentation(presentationId);
+      let presentation = await storageService.getPresentation(presentationId);
 
       if (!presentation) {
         return res.status(404).json({ error: 'Presentation not found' });
       }
+
+      await storageService.rehydrateSlidesFromDiskIfEmpty(presentationId);
+      presentation = await storageService.getPresentation(presentationId);
 
       res.json({
         id: presentation.id,

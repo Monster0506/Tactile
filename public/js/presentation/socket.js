@@ -23,6 +23,10 @@ export const socketApi = {
       console.log('🎯 Joined presentation session:', data);
       console.log('Session data - sessionId:', data.sessionId, 'currentSlide:', data.currentSlide, 'clientCount:', data.clientCount);
 
+      if (!this.presentationData || !Array.isArray(this.slides) || this.slides.length === 0) {
+        return;
+      }
+
       const newSlide = typeof data.currentSlide === 'number' && data.currentSlide >= 0 ? data.currentSlide : 0;
       console.log('Setting currentSlide from session:', newSlide);
 
@@ -37,6 +41,10 @@ export const socketApi = {
     this.socket.on('slide-updated', (data) => {
       console.log('🔄 Slide updated by another client:', data);
       console.log('Remote slide update - slideIndex:', data.slideIndex, 'current:', this.currentSlide);
+
+      if (!this.presentationData || !Array.isArray(this.slides) || this.slides.length === 0) {
+        return;
+      }
 
       if (typeof data.slideIndex === 'number' && data.slideIndex !== this.currentSlide) {
         console.log('🔄 Applying remote slide change from', this.currentSlide, 'to', data.slideIndex);

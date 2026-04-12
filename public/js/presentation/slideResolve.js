@@ -28,6 +28,8 @@ export function resolveSlideUrl(app, slideIndex) {
 
   if (slide.imageUrl) {
     imageUrl = slide.imageUrl;
+  } else if (slide.image_url) {
+    imageUrl = slide.image_url;
   } else if (slide.url) {
     imageUrl = slide.url;
   } else if (slide.path) {
