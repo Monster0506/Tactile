@@ -457,37 +457,74 @@ class FileProcessor {
             text-align: center;
         }
         
+        /* Heading scale: each level visually distinct (size, weight, color, ornament) */
         h1 {
             font-size: 144px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 40px;
-            line-height: 1.2;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 auto 48px;
+            line-height: 1.12;
+            letter-spacing: -0.035em;
             text-align: center;
+            max-width: 95%;
+            padding-bottom: 28px;
+            border-bottom: 12px solid #667eea;
         }
         
         h2 {
-            font-size: 112px;
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 30px;
-            line-height: 1.3;
+            font-size: 118px;
+            font-weight: 700;
+            color: #1e3a5f;
+            margin-bottom: 36px;
+            line-height: 1.18;
+            letter-spacing: -0.025em;
+            text-align: center;
         }
         
         h3 {
-            font-size: 88px;
-            font-weight: 500;
-            color: #667eea;
-            margin-bottom: 25px;
-            line-height: 1.3;
+            font-size: 100px;
+            font-weight: 700;
+            color: #5b21b6;
+            margin-bottom: 30px;
+            line-height: 1.22;
+            letter-spacing: -0.02em;
+            text-align: center;
         }
         
-        h4, h5, h6 {
+        h4 {
+            font-size: 84px;
+            font-weight: 600;
+            color: #1d4ed8;
+            margin-bottom: 26px;
+            line-height: 1.28;
+            text-align: center;
+            padding: 20px 36px;
+            background: rgba(102, 126, 234, 0.14);
+            border-radius: 16px;
+            max-width: 92%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        h5 {
             font-size: 72px;
-            font-weight: 500;
-            color: #718096;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 22px;
+            line-height: 1.32;
+            font-style: italic;
+            text-align: center;
+        }
+        
+        h6 {
+            font-size: 58px;
+            font-weight: 700;
+            color: #64748b;
             margin-bottom: 20px;
-            line-height: 1.4;
+            line-height: 1.35;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
         }
         
         p {
@@ -537,14 +574,17 @@ class FileProcessor {
             color: #e2e8f0;
             padding: 40px;
             border-radius: 15px;
-            margin: 30px 0;
+            margin: 30px auto;
             overflow-x: auto;
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 48px;
             line-height: 1.5;
             text-align: left;
-            width: 100%;
+            width: max-content;
+            max-width: 100%;
             box-sizing: border-box;
+            align-self: center;
+            white-space: pre;
         }
         
         pre code {
@@ -552,6 +592,8 @@ class FileProcessor {
             padding: 0;
             color: inherit;
             font-size: inherit;
+            text-align: left;
+            display: block;
         }
         
         /* Syntax highlighting for code blocks */
