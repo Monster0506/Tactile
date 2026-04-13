@@ -6,10 +6,10 @@ const FileProcessor = require('../FileProcessor');
 jest.mock('../htmlZipSlides', () => ({
     extractZipToDirectory: jest.fn(),
     buildSlideHtmlDocumentsFromExtractedRoot: jest.fn(),
-    buildSlideHtmlDocumentsFromPolyglotDeck: jest.fn()
+    buildSlideHtmlDocumentsFromHacksuDeck: jest.fn()
 }));
-jest.mock('../polyglotDeckCapture', () => ({
-    resolvePolyglotLayout: jest.fn()
+jest.mock('../hacksuDeckCapture', () => ({
+    resolveHacksuLayout: jest.fn()
 }));
 jest.mock('pdf-poppler');
 jest.mock('sharp');
@@ -44,9 +44,9 @@ const mockPuppeteer = require('puppeteer');
 const {
     extractZipToDirectory,
     buildSlideHtmlDocumentsFromExtractedRoot,
-    buildSlideHtmlDocumentsFromPolyglotDeck
+    buildSlideHtmlDocumentsFromHacksuDeck
 } = require('../htmlZipSlides');
-const { resolvePolyglotLayout } = require('../polyglotDeckCapture');
+const { resolveHacksuLayout } = require('../hacksuDeckCapture');
 
 describe('FileProcessor', () => {
     let fileProcessor;
@@ -56,11 +56,11 @@ describe('FileProcessor', () => {
         jest.clearAllMocks();
         fs.access.mockResolvedValue(undefined);
         extractZipToDirectory.mockResolvedValue(undefined);
-        resolvePolyglotLayout.mockResolvedValue(null);
+        resolveHacksuLayout.mockResolvedValue(null);
         buildSlideHtmlDocumentsFromExtractedRoot.mockResolvedValue([
             '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div class="slide">x</div></body></html>'
         ]);
-        buildSlideHtmlDocumentsFromPolyglotDeck.mockResolvedValue([
+        buildSlideHtmlDocumentsFromHacksuDeck.mockResolvedValue([
             '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div class="slide">x</div></body></html>'
         ]);
         fs.rm.mockResolvedValue(undefined);
@@ -293,7 +293,7 @@ describe('FileProcessor', () => {
         beforeEach(() => {
             fs.readFile.mockResolvedValue(Buffer.from('zip-bytes'));
             extractZipToDirectory.mockResolvedValue(undefined);
-            resolvePolyglotLayout.mockResolvedValue(null);
+            resolveHacksuLayout.mockResolvedValue(null);
             buildSlideHtmlDocumentsFromExtractedRoot.mockResolvedValue([
                 '<!DOCTYPE html><html><head></head><body><div class="slide">a</div></body></html>',
                 '<!DOCTYPE html><html><head></head><body><div class="slide">b</div></body></html>'

@@ -1,18 +1,19 @@
 const fs = require('fs').promises;
 const path = require('path');
-const pdf = require('pdf-poppler');
+const { pathToFileURL } = require('url');
+const os = require('os');
 const sharp = require('sharp');
 const mime = require('mime-types');
 const MarkdownIt = require('markdown-it');
 const {
   extractZipToDirectory,
   buildSlideHtmlDocumentsFromExtractedRoot,
-  buildSlideHtmlDocumentsFromPolyglotDeck
+  buildSlideHtmlDocumentsFromHacksuDeck
 } = require('./htmlZipSlides');
-const { resolvePolyglotLayout } = require('./polyglotDeckCapture');
+const { resolveHacksuLayout } = require('./hacksuDeckCapture');
 
-/** pdf-poppler: max width in px of the rasterized page (longer side scales to this) */
-const PDF_RASTER_MAX_WIDTH_PX = 6144;
+/** Scale factor passed to PDF.js viewport — higher = sharper, larger images */
+const PDF_RASTER_SCALE = 3;
 
 /** Logical 16:9 slide (CSS px) for markdown HTML + Puppeteer layout */
 const SLIDE_VIEWPORT_WIDTH = 1920;
@@ -164,55 +165,96 @@ class FileProcessor {
   }
 
   /**
-   * Convert PDF to slide images with proper resolution
+   * Convert PDF to slide images using PDF.js (pure JS) + Puppeteer (bundled Chromium).
+   * No system binaries required — fully cross-platform.
    * @param {string} pdfPath - Path to PDF file
    * @param {string} outputDir - Output directory for slides
    * @returns {Promise<Array>} Array of slide objects
    */
   async convertPDF(pdfPath, outputDir) {
+    const puppeteer = require('puppeteer');
+    const fssync = require('fs');
+
+    const pdfJsDir = path.join(path.dirname(require.resolve('pdfjs-dist/package.json')), 'build');
+    const pdfMjsUrl = pathToFileURL(path.join(pdfJsDir, 'pdf.mjs')).href;
+    const pdfWorkerUrl = pathToFileURL(path.join(pdfJsDir, 'pdf.worker.mjs')).href;
+    const pdfFileUrl = pathToFileURL(path.resolve(pdfPath)).href;
+
+    // Temp HTML file that loads PDF.js as an ES module and exposes renderPage()
+    const tmpHtml = path.join(os.tmpdir(), `tactile-pdf-${Date.now()}.html`);
+    fssync.writeFileSync(tmpHtml, `<!DOCTYPE html>
+<html><body style="margin:0;background:white">
+<canvas id="c"></canvas>
+<script type="module">
+  import * as pdfjsLib from '${pdfMjsUrl}';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '${pdfWorkerUrl}';
+  const pdfDoc = await pdfjsLib.getDocument('${pdfFileUrl}').promise;
+  window.totalPages = pdfDoc.numPages;
+  window.renderPage = async (pageNum, scale) => {
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.getElementById('c');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    return { width: viewport.width, height: viewport.height };
+  };
+  window.pdfReady = true;
+</script>
+</body></html>`);
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--allow-file-access-from-files']
+    });
+
     try {
-      const options = {
-        format: 'png',
-        out_dir: outputDir,
-        out_prefix: 'slide',
-        page: null, // Convert all pages
-        scale: PDF_RASTER_MAX_WIDTH_PX
-      };
+      const page = await browser.newPage();
+      await page.goto(pathToFileURL(tmpHtml).href);
+      await page.waitForFunction(() => window.pdfReady === true, { timeout: 30000 });
 
-      // Convert PDF to images
-      const convertedFiles = await pdf.convert(pdfPath, options);
-      
+      const numPages = await page.evaluate(() => window.totalPages);
       const slides = [];
-      
-      // Process each converted page
-      for (let i = 0; i < convertedFiles.length; i++) {
-        const slideNumber = i + 1;
-        const slideFilename = `slide-${slideNumber}.png`;
-        const slidePath = path.join(outputDir, slideFilename);
-        const thumbnailFilename = `thumb-${slideNumber}.png`;
-        const thumbnailPath = path.join(outputDir, thumbnailFilename);
 
-        // Generate high-quality thumbnail with proper aspect ratio
-        await sharp(slidePath)
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const slideId = `slide-${pageNum}`;
+        const slideImagePath = path.join(outputDir, `${slideId}.png`);
+        const thumbImagePath = path.join(outputDir, `thumb-${pageNum}.png`);
+
+        const { width, height } = await page.evaluate(
+          (n, scale) => window.renderPage(n, scale),
+          pageNum, PDF_RASTER_SCALE
+        );
+        await page.setViewport({ width: Math.ceil(width), height: Math.ceil(height), deviceScaleFactor: 1 });
+        const canvasEl = await page.$('#c');
+        await canvasEl.screenshot({ path: slideImagePath, type: 'png' });
+
+        await sharp(slideImagePath)
           .resize(SLIDE_THUMB_WIDTH, SLIDE_THUMB_HEIGHT, {
             fit: 'inside',
             withoutEnlargement: true,
             background: { r: 255, g: 255, b: 255, alpha: 1 }
           })
           .png({ compressionLevel: 9 })
-          .toFile(thumbnailPath);
+          .toFile(thumbImagePath);
 
         slides.push({
-          id: `slide-${slideNumber}`,
-          imageUrl: `/slides/${path.basename(outputDir)}/${slideFilename}`,
-          thumbnailUrl: `/slides/${path.basename(outputDir)}/${thumbnailFilename}`,
-          order: slideNumber
+          id: slideId,
+          imageUrl: `/slides/${path.basename(outputDir)}/${slideId}.png`,
+          thumbnailUrl: `/slides/${path.basename(outputDir)}/thumb-${pageNum}.png`,
+          order: pageNum
         });
+
+        console.log(`Rendered PDF page ${pageNum}/${numPages}`);
       }
 
+      await page.close();
       return slides;
     } catch (error) {
       throw new Error(`PDF conversion failed: ${error.message}`);
+    } finally {
+      await browser.close();
+      fssync.unlinkSync(tmpHtml);
     }
   }
 
@@ -300,11 +342,11 @@ class FileProcessor {
       const buf = await fs.readFile(zipPath);
       await extractZipToDirectory(buf, extractDir);
 
-      const polyglotLayout = await resolvePolyglotLayout(extractDir);
-      if (polyglotLayout) {
-        const documents = await buildSlideHtmlDocumentsFromPolyglotDeck(
+      const hacksuLayout = await resolveHacksuLayout(extractDir);
+      if (hacksuLayout) {
+        const documents = await buildSlideHtmlDocumentsFromHacksuDeck(
           extractDir,
-          polyglotLayout.presentationDir
+          hacksuLayout.presentationDir
         );
         const slides = await this.renderHtmlPagesToSlides(documents, outputDir);
         console.log(`Successfully converted ${slides.length} HacKSU slides (Jinja templates)`);

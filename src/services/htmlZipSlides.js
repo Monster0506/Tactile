@@ -5,7 +5,7 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 const JSZip = require('jszip');
 const cheerio = require('cheerio');
-const { renderPolyglotIndexHtml } = require('./polyglotJinjaRender');
+const { renderHacksuIndexHtml } = require('./hacksuJinjaRender');
 
 const MAX_UNCOMPRESSED_BYTES = 200 * 1024 * 1024;
 
@@ -287,7 +287,7 @@ ${fragment}
 
   if (documents.length === 0) {
     throw new Error(
-      'No slides found in HacKSU presentation format. Use one or more elements like <div class="slide" id="slide-1">…</div> (see hacksu/polyglot presentation templates).'
+      'No slides found in HacKSU slides format. Use one or more elements like <div class="slide" id="slide-1">…</div>.'
     );
   }
 
@@ -302,8 +302,8 @@ ${fragment}
  * @param {string} presentationDir
  * @returns {Promise<string[]>}
  */
-async function buildSlideHtmlDocumentsFromPolyglotDeck(extractRootFsPath, presentationDir) {
-  const html = await renderPolyglotIndexHtml(presentationDir);
+async function buildSlideHtmlDocumentsFromHacksuDeck(extractRootFsPath, presentationDir) {
+  const html = await renderHacksuIndexHtml(presentationDir);
   const entryDir = path.join(presentationDir, 'templates');
   const $ = cheerio.load(html);
   await rewriteRootAbsolutePaths($, extractRootFsPath, entryDir, presentationDir);
@@ -343,7 +343,7 @@ ${fragment}
 
   if (documents.length === 0) {
     throw new Error(
-      'No slides found after rendering Jinja templates. Expected #deck .slide elements (see hacksu/polyglot).'
+      'No slides found after rendering Jinja templates. Expected #deck .slide elements.'
     );
   }
 
@@ -358,7 +358,7 @@ async function buildSlideHtmlDocumentsFromZipBuffer(zipBuffer, extractRootFsPath
 module.exports = {
   buildSlideHtmlDocumentsFromZipBuffer,
   buildSlideHtmlDocumentsFromExtractedRoot,
-  buildSlideHtmlDocumentsFromPolyglotDeck,
+  buildSlideHtmlDocumentsFromHacksuDeck,
   extractZipToDirectory,
   findEntryHtmlRelativePath,
   rewriteRootAbsolutePaths

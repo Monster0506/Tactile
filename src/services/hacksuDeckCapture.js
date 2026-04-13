@@ -16,7 +16,7 @@ async function fileExists(p) {
  * @param {string} extractRoot - Where the zip was extracted
  * @returns {Promise<{ presentationDir: string } | null>}
  */
-async function resolvePolyglotLayout(extractRoot) {
+async function resolveHacksuLayout(extractRoot) {
   const nestedApp = path.join(extractRoot, 'presentation', 'app.py');
   const flatApp = path.join(extractRoot, 'app.py');
   if (await fileExists(nestedApp)) {
@@ -50,6 +50,6 @@ async function findDemoC(startDir) {
 }
 
 module.exports = {
-  resolvePolyglotLayout,
+  resolveHacksuLayout,
   findDemoC
 };
