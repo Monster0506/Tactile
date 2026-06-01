@@ -120,7 +120,6 @@ class StorageService {
     presentation.slides = nums.map((n) => ({
       id: `slide-${n}`,
       imageUrl: `/slides/${presentationId}/slide-${n}.png`,
-      thumbnailUrl: `/slides/${presentationId}/thumb-${n}.png`,
       order: n
     }));
 

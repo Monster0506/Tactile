@@ -68,15 +68,13 @@ describe('Presentation Model', () => {
   describe('addSlide', () => {
     it('should add slide with generated ID and order', () => {
       const slideData = {
-        imageUrl: '/images/slide1.png',
-        thumbnailUrl: '/images/thumb1.png'
+        imageUrl: '/images/slide1.png'
       };
 
       const slide = presentation.addSlide(slideData);
 
       expect(slide.id).toBeDefined();
       expect(slide.imageUrl).toBe('/images/slide1.png');
-      expect(slide.thumbnailUrl).toBe('/images/thumb1.png');
       expect(slide.drawings).toEqual([]);
       expect(slide.order).toBe(0);
       expect(presentation.slides).toHaveLength(1);
@@ -268,8 +266,7 @@ describe('Presentation Model', () => {
   describe('validate', () => {
     it('should validate correct presentation', () => {
       presentation.addSlide({
-        imageUrl: '/slide1.png',
-        thumbnailUrl: '/thumb1.png'
+        imageUrl: '/slide1.png'
       });
 
       const result = presentation.validate();

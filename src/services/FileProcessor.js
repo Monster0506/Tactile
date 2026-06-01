@@ -2,7 +2,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const { pathToFileURL } = require('url');
 const os = require('os');
-const sharp = require('sharp');
 const mime = require('mime-types');
 const MarkdownIt = require('markdown-it');
 const {
@@ -25,10 +24,6 @@ const SLIDE_VIEWPORT_HEIGHT = 1080;
  */
 const SLIDE_SCREENSHOT_DEVICE_SCALE = 4;
 
-/** Thumbnail target (16:9); rasterized at SLIDE_THUMB_DEVICE_SCALE for crisp UI */
-const SLIDE_THUMB_WIDTH = 960;
-const SLIDE_THUMB_HEIGHT = 540;
-const SLIDE_THUMB_DEVICE_SCALE = 4;
 
 class FileProcessor {
   constructor() {
@@ -219,7 +214,6 @@ class FileProcessor {
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         const slideId = `slide-${pageNum}`;
         const slideImagePath = path.join(outputDir, `${slideId}.png`);
-        const thumbImagePath = path.join(outputDir, `thumb-${pageNum}.png`);
 
         const { width, height } = await page.evaluate(
           (n, scale) => window.renderPage(n, scale),
@@ -229,19 +223,9 @@ class FileProcessor {
         const canvasEl = await page.$('#c');
         await canvasEl.screenshot({ path: slideImagePath, type: 'png' });
 
-        await sharp(slideImagePath)
-          .resize(SLIDE_THUMB_WIDTH, SLIDE_THUMB_HEIGHT, {
-            fit: 'inside',
-            withoutEnlargement: true,
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
-          })
-          .png({ compressionLevel: 9 })
-          .toFile(thumbImagePath);
-
         slides.push({
           id: slideId,
           imageUrl: `/slides/${path.basename(outputDir)}/${slideId}.png`,
-          thumbnailUrl: `/slides/${path.basename(outputDir)}/thumb-${pageNum}.png`,
           order: pageNum
         });
 
@@ -262,7 +246,7 @@ class FileProcessor {
    * Rasterize full HTML documents to slide + thumbnail PNGs (markdown + HacKSU presentation zips).
    * @param {string[]} fullHtmlDocuments - One complete HTML document per slide
    * @param {string} outputDir
-   * @returns {Promise<Array<{ id: string, imageUrl: string, thumbnailUrl: string, order: number }>>}
+   * @returns {Promise<Array<{ id: string, imageUrl: string, order: number }>>}
    */
   async renderHtmlPagesToSlides(fullHtmlDocuments, outputDir) {
     const puppeteer = require('puppeteer');
@@ -277,7 +261,6 @@ class FileProcessor {
         const slideNumber = i + 1;
         const slideId = `slide-${slideNumber}`;
         const slideImagePath = path.join(outputDir, `${slideId}.png`);
-        const thumbImagePath = path.join(outputDir, `thumb-${slideNumber}.png`);
 
         const page = await browser.newPage();
 
@@ -297,24 +280,11 @@ class FileProcessor {
           fullPage: false
         });
 
-        await page.setViewport({
-          width: SLIDE_THUMB_WIDTH,
-          height: SLIDE_THUMB_HEIGHT,
-          deviceScaleFactor: SLIDE_THUMB_DEVICE_SCALE
-        });
-
-        await page.screenshot({
-          path: thumbImagePath,
-          type: 'png',
-          fullPage: false
-        });
-
         await page.close();
 
         slides.push({
           id: slideId,
           imageUrl: `/slides/${path.basename(outputDir)}/${slideId}.png`,
-          thumbnailUrl: `/slides/${path.basename(outputDir)}/thumb-${slideNumber}.png`,
           order: slideNumber
         });
 

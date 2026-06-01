@@ -102,7 +102,6 @@ describe('FileProcessor Integration Tests', () => {
           expect.objectContaining({
             id: 'slide-1',
             imageUrl: expect.stringContaining('/slides/'),
-            thumbnailUrl: expect.stringContaining('/slides/'),
             order: 1
           })
         ]),

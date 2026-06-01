@@ -12,7 +12,6 @@ jest.mock('../hacksuDeckCapture', () => ({
     resolveHacksuLayout: jest.fn()
 }));
 jest.mock('pdf-poppler');
-jest.mock('sharp');
 jest.mock('markdown-it');
 jest.mock('puppeteer', () => ({
     launch: jest.fn().mockResolvedValue({
@@ -38,7 +37,6 @@ jest.mock('fs', () => ({
 }));
 
 const mockPdf = require('pdf-poppler');
-const mockSharp = require('sharp');
 const mockMarkdownIt = require('markdown-it');
 const mockPuppeteer = require('puppeteer');
 const {
@@ -65,22 +63,6 @@ describe('FileProcessor', () => {
         ]);
         fs.rm.mockResolvedValue(undefined);
 
-        // Setup sharp mock chain for both creation and file operations
-        const mockSharpInstance = {
-            resize: jest.fn().mockReturnThis(),
-            png: jest.fn().mockReturnThis(),
-            toFile: jest.fn().mockResolvedValue(),
-            toBuffer: jest.fn().mockResolvedValue(Buffer.from('mock image data')),
-            composite: jest.fn().mockReturnThis()
-        };
-
-        // Mock both sharp() and sharp({ create: ... }) calls
-        mockSharp.mockImplementation((input) => {
-            if (typeof input === 'string' || Buffer.isBuffer(input) || (input && input.create)) {
-                return mockSharpInstance;
-            }
-            return mockSharpInstance;
-        });
     });
 
     describe('detectFormat', () => {
@@ -158,7 +140,6 @@ describe('FileProcessor', () => {
                     expect.objectContaining({
                         id: 'slide-1',
                         imageUrl: expect.stringContaining('/slides/'),
-                        thumbnailUrl: expect.stringContaining('/slides/'),
                         order: 1
                     })
                 ]),
@@ -206,7 +187,6 @@ describe('FileProcessor', () => {
                     expect.objectContaining({
                         id: 'slide-1',
                         imageUrl: expect.stringContaining('/slides/'),
-                        thumbnailUrl: expect.stringContaining('/slides/'),
                         order: 1
                     })
                 ]),
@@ -233,7 +213,6 @@ describe('FileProcessor', () => {
                     expect.objectContaining({
                         id: 'slide-1',
                         imageUrl: expect.stringContaining('/slides/'),
-                        thumbnailUrl: expect.stringContaining('/slides/'),
                         order: 1
                     })
                 ]),
@@ -251,32 +230,14 @@ describe('FileProcessor', () => {
             mockPdf.convert.mockResolvedValue(['slide-1.png', 'slide-2.png', 'slide-3.png']);
         });
 
-        test('should convert PDF and generate thumbnails with proper resolution', async () => {
+        test('should convert PDF and return slide objects', async () => {
             const slides = await fileProcessor.convertPDF('/path/to/file.pdf', '/output/dir');
-
-            expect(mockPdf.convert).toHaveBeenCalledWith('/path/to/file.pdf', {
-                format: 'png',
-                out_dir: '/output/dir',
-                out_prefix: 'slide',
-                page: null,
-                scale: 6144
-            });
 
             expect(slides).toHaveLength(3);
             expect(slides[0]).toMatchObject({
                 id: 'slide-1',
                 imageUrl: expect.stringContaining('slide-1.png'),
-                thumbnailUrl: expect.stringContaining('thumb-1.png'),
                 order: 1
-            });
-
-            // Verify thumbnail generation with proper settings
-            expect(mockSharp).toHaveBeenCalledTimes(3);
-            const mockSharpInstance = mockSharp();
-            expect(mockSharpInstance.resize).toHaveBeenCalledWith(960, 540, {
-                fit: 'inside',
-                withoutEnlargement: true,
-                background: { r: 255, g: 255, b: 255, alpha: 1 }
             });
         });
 

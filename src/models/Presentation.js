@@ -34,14 +34,13 @@ class Presentation {
 
   /**
    * Add a slide to the presentation
-   * @param {Object} slideData - Slide data containing imageUrl, thumbnailUrl, etc.
+   * @param {Object} slideData - Slide data containing imageUrl, etc.
    * @returns {Object} Added slide with generated ID
    */
   addSlide(slideData) {
     const slide = {
       id: crypto.randomBytes(8).toString('hex'),
       imageUrl: slideData.imageUrl,
-      thumbnailUrl: slideData.thumbnailUrl,
       drawings: [],
       order: this.slides.length,
       ...slideData
