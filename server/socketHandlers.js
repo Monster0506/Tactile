@@ -248,4 +248,4 @@ function attachSocketHandlers(io, deps) {
   });
 }
 
-module.exports = { attachSocketHandlers, createRequireSession, createRequirePresenter, verifyPresenterToken };
+module.exports = { attachSocketHandlers };

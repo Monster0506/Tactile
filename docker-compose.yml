@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    volumes:
+      - app-data:/app/data
+      - app-uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  app-uploads:

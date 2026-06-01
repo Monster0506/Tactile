@@ -4,3 +4,4 @@ data/
 uploads/slides/*
 uploads/temp/*
 data/*
+docker-compose.override.yml
