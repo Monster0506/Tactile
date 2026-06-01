@@ -238,7 +238,7 @@ export const laserUi = {
   },
 
   emitLaserTrailSample(nx, ny) {
-    if (!this.socket?.connected) return;
+    if (this.isObserver || !this.socket?.connected) return;
     const now = Date.now();
     if (now - this.laser.lastEmit < LASER_EMIT_INTERVAL_MS) return;
     this.laser.lastEmit = now;
@@ -337,7 +337,7 @@ export const laserUi = {
 
     const feedback = document.createElement('div');
     feedback.className = `swipe-feedback ${direction}`;
-    feedback.textContent = direction === 'left' ? '→' : '←';
+    feedback.textContent = direction === 'left' ? '>' : '<';
 
     slidePreview.appendChild(feedback);
 
@@ -359,7 +359,7 @@ export const laserUi = {
   },
 
   /**
-   * Mobile: pointer tool — exits draw mode and toggles laser trail.
+   * Mobile: pointer tool - exits draw mode and toggles laser trail.
    */
   selectMobilePointer() {
     if (this.drawing.isDrawingMode) {

@@ -82,10 +82,10 @@ int main() {
     return 0;
 }`);
 
-  // Minimal presentation/app.py — presence triggers HacKSU slides path
+  // Minimal presentation/app.py - presence triggers HacKSU slides path
   zip.file('presentation/app.py', `from flask import Flask\napp = Flask(__name__)\n`);
 
-  // Jinja template — uses {{ demo_c }} injected by renderHacksuIndexHtml
+  // Jinja template - uses {{ demo_c }} injected by renderHacksuIndexHtml
   zip.file('presentation/templates/index.html', `<!DOCTYPE html>
 <html><head>
 <style>

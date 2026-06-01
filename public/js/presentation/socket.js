@@ -2,26 +2,28 @@ import { PING_INTERVAL_MS } from './constants.js';
 
 export const socketApi = {
   setupSocket() {
-    console.log('🔌 SETTING UP SOCKET CONNECTION');
+    console.log('[socket] setting up connection');
     this.socket = io();
 
     this.socket.on('connect', () => {
-      console.log('✅ Connected to server');
+      console.log('[socket] connected');
       this.isConnected = true;
       if (this.presentationId && this.presentationData) {
-        console.log('🔄 Auto-rejoining presentation after reconnect');
+        console.log('[socket] auto-rejoining after reconnect');
         this.joinPresentation();
       }
     });
 
     this.socket.on('disconnect', () => {
-      console.log('❌ Disconnected from server');
+      console.log('[socket] disconnected');
       this.isConnected = false;
     });
 
     this.socket.on('session-joined', (data) => {
-      console.log('🎯 Joined presentation session:', data);
+      console.log('[socket] joined session:', data);
       console.log('Session data - sessionId:', data.sessionId, 'currentSlide:', data.currentSlide, 'clientCount:', data.clientCount);
+
+      this.isObserver = !data.isPresenter;
 
       if (!this.presentationData || !Array.isArray(this.slides) || this.slides.length === 0) {
         return;
@@ -31,7 +33,7 @@ export const socketApi = {
       console.log('Setting currentSlide from session:', newSlide);
 
       if (newSlide !== this.currentSlide) {
-        console.log('🔄 Updating currentSlide from', this.currentSlide, 'to', newSlide);
+        console.log('[socket] updating currentSlide from', this.currentSlide, 'to', newSlide);
         this.currentSlide = newSlide;
         this.displaySlide(this.currentSlide);
       }
@@ -39,7 +41,7 @@ export const socketApi = {
     });
 
     this.socket.on('slide-updated', (data) => {
-      console.log('🔄 Slide updated by another client:', data);
+      console.log('[socket] slide updated by another client:', data);
       console.log('Remote slide update - slideIndex:', data.slideIndex, 'current:', this.currentSlide);
 
       if (!this.presentationData || !Array.isArray(this.slides) || this.slides.length === 0) {
@@ -47,19 +49,19 @@ export const socketApi = {
       }
 
       if (typeof data.slideIndex === 'number' && data.slideIndex !== this.currentSlide) {
-        console.log('🔄 Applying remote slide change from', this.currentSlide, 'to', data.slideIndex);
+        console.log('[socket] applying remote slide change from', this.currentSlide, 'to', data.slideIndex);
         this.currentSlide = data.slideIndex;
         this.displaySlide(this.currentSlide);
       }
     });
 
     this.socket.on('client-connected', (data) => {
-      console.log('👤 Client connected:', data);
+      console.log('[socket] client connected:', data);
       this.clientCount = data.clientCount;
     });
 
     this.socket.on('client-disconnected', (data) => {
-      console.log('👤 Client disconnected:', data);
+      console.log('[socket] client disconnected:', data);
       this.clientCount = data.clientCount;
     });
 
@@ -88,7 +90,7 @@ export const socketApi = {
     });
 
     this.socket.on('error', (data) => {
-      console.error('🚨 SOCKET ERROR RECEIVED 🚨');
+      console.error('[socket] ERROR RECEIVED');
       console.error('Error timestamp:', new Date().toISOString());
       console.error('Error data:', data);
       console.error('Error message:', data.message);
@@ -103,8 +105,8 @@ export const socketApi = {
       console.error('  - presentationData loaded:', !!this.presentationData);
 
       if (data.message && data.message.includes('slide')) {
-        console.error('🎯 This appears to be a SLIDE-RELATED error');
-        console.error('🔍 Possible causes:');
+        console.error('[socket] this appears to be a SLIDE-RELATED error');
+        console.error('[socket] possible causes:');
         console.error('   1. Server trying to process old slide change events');
         console.error('   2. Session validation failing on server side');
         console.error('   3. Race condition during connection setup');
@@ -116,7 +118,7 @@ export const socketApi = {
       this.showError(data.message || 'Connection error occurred');
     });
 
-    console.log('🔌 Socket event listeners registered');
+    console.log('[socket] event listeners registered');
   },
 
   startConnectionHealthCheck() {

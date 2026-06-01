@@ -7,7 +7,7 @@ const { app, server, io, storageService, sessionManager } = createApplication();
 storageService.initialize().catch(console.error);
 
 process.on('uncaughtException', (err) => {
-  console.error('[fatal] uncaughtException — process may be unstable:', err);
+  console.error('[fatal] uncaughtException - process may be unstable:', err);
 });
 
 process.on('unhandledRejection', (reason) => {

@@ -33,13 +33,14 @@ class Session {
    * @param {string} deviceType - Device type ('desktop' or 'mobile')
    * @returns {Object} Added client object
    */
-  addClient(socketId, deviceType = 'desktop') {
+  addClient(socketId, deviceType = 'desktop', isObserver = false) {
     // Remove existing client with same socket ID if exists
     this.removeClient(socketId);
 
     const client = {
       socketId,
       deviceType,
+      isObserver: Boolean(isObserver),
       joinedAt: new Date()
     };
 

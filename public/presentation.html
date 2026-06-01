@@ -30,7 +30,7 @@
 
             <!-- Error display for failed slides -->
             <div x-show="slideError" class="slide-error">
-                <div class="error-icon">📄</div>
+                <div class="error-icon">[!]</div>
                 <div class="error-message">Failed to load slide <span
                         x-text="displaySlideNumber"></span>
                 </div>
@@ -52,14 +52,101 @@
             <span x-text="totalSlides">1</span>
         </div>
 
+        <div x-show="!isMobile && isObserver" id="observerBadge">
+            <span>Observing</span>
+            <button type="button" id="presenterLoginBtn"
+                    @click="$refs.presenterTokenInput.style.display = $refs.presenterTokenInput.style.display === 'none' ? 'flex' : 'none'; $nextTick(() => $refs.presenterTokenField.focus())">
+                presenter?
+            </button>
+            <div x-ref="presenterTokenInput" id="presenterTokenInput" style="display:none">
+                <input x-ref="presenterTokenField" type="text" placeholder="paste token"
+                       @keydown.enter="window.location.href = window.location.pathname + '?token=' + $event.target.value.trim()"
+                       @keydown.escape="$refs.presenterTokenInput.style.display = 'none'">
+                <button type="button"
+                        @click="window.location.href = window.location.pathname + '?token=' + $refs.presenterTokenField.value.trim()">
+                    Go
+                </button>
+            </div>
+        </div>
+
         <div x-show="!isMobile" id="connectionStatus">
-            <span id="statusIndicator" :class="{ 'disconnected': !isConnected }">●</span>
+            <span id="statusIndicator" :class="{ 'disconnected': !isConnected }">*</span>
             <span x-text="isConnected ? 'Connected' : 'Disconnected'">Connected</span>
             <span x-text="clientCount" class="client-count">1</span>
         </div>
 
-        <div x-show="!isMobile && hintsVisible" id="navigationHints" :class="{ 'show': hintsVisible }">
-            ← → Arrow keys • Space • PgUp/PgDn • Click • F for fullscreen
+        <div x-show="!isMobile && hintsVisible && !isObserver" id="navigationHints" :class="{ 'show': hintsVisible }">
+            Left/Right - Space - PgUp/PgDn - Click - F for fullscreen
+        </div>
+
+        <!-- Desktop Drawing Toolbar -->
+        <div x-show="!isMobile && !isObserver" id="drawingToolbar" class="drawing-toolbar" :class="{ 'drawing-active': drawing.isDrawingMode }">
+            <button type="button" class="toolbar-btn toggle-btn"
+                    :class="{ active: drawing.isDrawingMode }"
+                    @click="drawing.isDrawingMode = !drawing.isDrawingMode; if (!drawing.isDrawingMode) { drawing.isDrawing = false; }"
+                    title="Toggle annotations">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+            </button>
+
+            <template x-if="drawing.isDrawingMode">
+                <div style="display:contents">
+                    <div class="toolbar-separator"></div>
+
+                    <button type="button" class="toolbar-btn"
+                            :class="{ active: drawing.currentTool === 'pen' }"
+                            @click="drawing.currentTool = 'pen'"
+                            title="Pen">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        </svg>
+                    </button>
+
+                    <button type="button" class="toolbar-btn"
+                            :class="{ active: drawing.currentTool === 'eraser' }"
+                            @click="drawing.currentTool = 'eraser'"
+                            title="Eraser">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53l-4.95-4.95l-4.95 4.95z"/>
+                        </svg>
+                    </button>
+
+                    <div class="toolbar-separator"></div>
+
+                    <div class="color-picker-container">
+                        <input type="color" class="color-picker"
+                               :value="drawing.currentColor"
+                               @input="drawing.currentColor = $event.target.value"
+                               title="Color">
+                        <div class="color-presets">
+                            <template x-for="preset in drawing.colorPresets" :key="preset">
+                                <div class="color-preset"
+                                     :style="{ background: preset }"
+                                     @click="drawing.currentColor = preset; drawing.currentTool = 'pen'"></div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="brush-size-container">
+                        <span class="brush-size-label">Size</span>
+                        <input type="range" class="brush-size-slider" min="1" max="20"
+                               :value="drawing.currentWidth"
+                               @input="drawing.currentWidth = Number($event.target.value)">
+                        <span class="brush-size-value" x-text="drawing.currentWidth"></span>
+                    </div>
+
+                    <div class="toolbar-separator"></div>
+
+                    <button type="button" class="toolbar-btn clear-btn"
+                            @click="clearDrawings()"
+                            title="Clear annotations on this slide">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
+            </template>
         </div>
 
         <!-- Mobile Controller Interface -->
@@ -96,7 +183,9 @@
                 </div>
             </div>
 
-            <div class="mobile-tool-strip" role="toolbar" aria-label="Annotation tools">
+            <div x-show="isObserver" class="mobile-observer-badge">Observing</div>
+
+            <div x-show="!isObserver" class="mobile-tool-strip" role="toolbar" aria-label="Annotation tools">
                 <button type="button" @click="selectMobilePen()"
                     :class="{ 'active': drawing.isDrawingMode && drawing.currentTool === 'pen' }"
                     class="mobile-tool-chip" title="Pen" aria-label="Pen">
@@ -134,7 +223,7 @@
 
             <div class="mobile-status">
                 <div class="connection-indicator">
-                    <span :class="{ 'disconnected': !isConnected }" id="mobileStatusIndicator">●</span>
+                    <span :class="{ 'disconnected': !isConnected }" id="mobileStatusIndicator">*</span>
                     <span x-text="isConnected ? 'Connected' : 'Disconnected'">Connected</span>
                 </div>
                 <div class="client-info">

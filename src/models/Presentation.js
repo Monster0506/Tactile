@@ -12,6 +12,7 @@ class Presentation {
     this.slides = data.slides || [];
     this.createdAt = data.createdAt || new Date();
     this.sessionId = data.sessionId || null;
+    this.presenterToken = data.presenterToken || crypto.randomBytes(24).toString('hex');
     this.slidesDirectory = path.join('uploads', 'slides', this.id);
   }
 
@@ -143,7 +144,8 @@ class Presentation {
       title: this.title,
       slides: this.slides,
       createdAt: this.createdAt,
-      sessionId: this.sessionId
+      sessionId: this.sessionId,
+      presenterToken: this.presenterToken
     };
   }
 

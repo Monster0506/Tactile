@@ -155,7 +155,7 @@ async function findEntryHtmlRelativePath(extractRootFsPath) {
 }
 
 /**
- * Map /static/…, /logo, etc. to relative URLs so file:// + base works in Puppeteer.
+ * Map /static/..., /logo, etc. to relative URLs so file:// + base works in Puppeteer.
  * Leading "/" is resolved against siteRootDir (HacKSU: presentation/; flat zip: extract root).
  */
 async function rewriteRootAbsolutePaths($, extractRoot, entryDir, siteRootDir = extractRoot) {
@@ -245,7 +245,7 @@ function forceSlideVisibleCss() {
 
 /**
  * Unzip to extractRootFsPath, find slide HTML, return one full HTML document per
- * &lt;div class="slide"&gt;…&lt;/div&gt; (linked CSS inlined, &lt;base&gt; for images/fonts).
+ * &lt;div class="slide"&gt;...&lt;/div&gt; (linked CSS inlined, &lt;base&gt; for images/fonts).
  * @param {string} extractRootFsPath
  * @returns {Promise<string[]>}
  */
@@ -287,7 +287,7 @@ ${fragment}
 
   if (documents.length === 0) {
     throw new Error(
-      'No slides found in HacKSU slides format. Use one or more elements like <div class="slide" id="slide-1">…</div>.'
+      'No slides found in HacKSU slides format. Use one or more elements like <div class="slide" id="slide-1">...</div>.'
     );
   }
 

@@ -3,7 +3,7 @@ import { EMPTY_IMG_DATA_URL } from './constants.js';
 
 /**
  * Scalar and nested state for the presentation Alpine component.
- * Behaviors (methods) are merged separately — see behaviorsRegistry.js.
+ * Behaviors (methods) are merged separately - see behaviorsRegistry.js.
  */
 export function createPresentationState() {
   return {
@@ -21,6 +21,7 @@ export function createPresentationState() {
     slideActiveLayer: 0,
     slideLayersReady: false,
     isConnected: false,
+    isObserver: false,
     clientCount: 1,
     isMobile: false,
     isLaserActive: false,

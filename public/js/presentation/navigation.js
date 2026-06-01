@@ -107,16 +107,18 @@ export const navigation = {
 
     if (this.presentationId) {
       const deviceType = this.isMobile ? 'mobile' : 'desktop';
+      const presenterToken = new URLSearchParams(window.location.search).get('token') || '';
       const joinData = {
         presentationId: this.presentationId,
-        deviceType
+        deviceType,
+        presenterToken
       };
 
       console.log('Emitting join-presentation with data:', joinData);
       this.socket.emit('join-presentation', joinData);
       console.log('Join-presentation event emitted');
     } else {
-      console.error('❌ Cannot join presentation - no presentation ID');
+      console.error('[ERROR] Cannot join presentation - no presentation ID');
     }
     console.log('=== END JOIN PRESENTATION ATTEMPT ===');
   },
@@ -199,6 +201,7 @@ export const navigation = {
   },
 
   goToSlide(newSlide) {
+    if (this.isObserver) return false;
     if (!this.socket?.connected || !this.presentationId) return false;
     if (typeof newSlide !== 'number' || newSlide < 0 || newSlide >= this.totalSlides) return false;
     this.socket.emit('slide-change', { slideIndex: newSlide });

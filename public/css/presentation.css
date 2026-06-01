@@ -6,21 +6,26 @@
 
 :root {
     --presentation-slide-fade: 0.5s cubic-bezier(0.33, 0.12, 0.24, 1);
+    --bg: #0a0a0a;
+    --surface: #111;
+    --border: #1e1e1e;
+    --text: #d4d4d4;
+    --text-dim: #555;
+    --accent: #7c6aff;
 }
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #000;
-    color: white;
+    background: var(--bg);
+    color: var(--text);
     overflow: hidden;
-    cursor: none; /* Hide cursor during presentation */
+    cursor: none;
 }
 
 body.mobile-device {
     cursor: auto;
 }
 
-/* Show cursor when hovering over UI elements */
 #slideCounter:hover,
 #connectionStatus:hover {
     cursor: default;
@@ -42,12 +47,7 @@ body.mobile-device {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #111;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-#slideDisplay:hover {
+    background: var(--bg);
     cursor: pointer;
 }
 
@@ -73,7 +73,6 @@ body.mobile-device {
     transform: translate(-50%, -50%);
     opacity: 0;
     transition: opacity var(--presentation-slide-fade);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     pointer-events: none;
 }
 
@@ -93,47 +92,46 @@ body.mobile-device {
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #ff6b6b;
-    font-size: 20px;
+    color: #e55;
+    font-size: 14px;
     text-align: center;
     padding: 40px;
+    gap: 8px;
 }
 
 .slide-error .error-icon {
-    font-size: 48px;
-    margin-bottom: 20px;
+    font-size: 32px;
+    margin-bottom: 8px;
 }
 
 .slide-error .error-message {
-    font-size: 24px;
-    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--text);
 }
 
 .slide-error .error-details {
-    font-size: 16px;
-    margin-bottom: 20px;
-    color: #ccc;
+    font-size: 13px;
+    color: var(--text-dim);
 }
 
 .slide-error .error-url {
-    font-size: 12px;
-    color: #888;
+    font-size: 11px;
+    color: var(--text-dim);
     font-family: monospace;
     word-break: break-all;
     max-width: 80%;
 }
 
+/* HUD elements */
 #slideCounter {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 10px 15px;
-    border-radius: 20px;
-    font-size: 14px;
+    background: var(--surface);
+    padding: 7px 14px;
+    font-size: 13px;
     z-index: 1000;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
     transition: opacity 0.3s ease;
 }
 
@@ -141,17 +139,109 @@ body.mobile-device {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 10px 15px;
-    border-radius: 20px;
-    font-size: 14px;
+    background: var(--surface);
+    padding: 7px 14px;
+    font-size: 13px;
     z-index: 1000;
     display: flex;
     align-items: center;
     gap: 8px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
     transition: opacity 0.3s ease;
+}
+
+/* Observer badge (desktop) */
+#observerBadge {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 7px 14px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+}
+
+#presenterLoginBtn {
+    width: auto;
+    padding: 2px 8px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: lowercase;
+    border-color: var(--accent);
+    color: var(--accent);
+    opacity: 0.6;
+    cursor: pointer;
+}
+
+#presenterLoginBtn:hover {
+    opacity: 1;
+    background: transparent;
+    color: var(--accent);
+}
+
+#presenterTokenInput {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px;
+    margin-top: 4px;
+}
+
+#presenterTokenInput input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: monospace;
+    font-size: 12px;
+    padding: 4px 8px;
+    width: 240px;
+    outline: none;
+    cursor: text;
+}
+
+#presenterTokenInput input:focus {
+    border-color: var(--accent);
+}
+
+#presenterTokenInput button {
+    width: auto;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-color: var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+}
+
+#presenterTokenInput button:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* Observer badge (mobile) */
+.mobile-observer-badge {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+    margin: 8px 4px;
 }
 
 /* Navigation hints */
@@ -159,23 +249,21 @@ body.mobile-device {
     position: fixed;
     bottom: 20px;
     left: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 10px 15px;
-    border-radius: 20px;
+    background: var(--surface);
+    padding: 7px 14px;
     font-size: 12px;
     z-index: 1000;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
     opacity: 0;
     transition: opacity 0.3s ease;
-    color: #ccc;
+    color: var(--text-dim);
 }
 
 #navigationHints.show {
     opacity: 1;
 }
 
-/* Fullscreen styles */
+/* Fullscreen */
 body:fullscreen {
     cursor: none;
 }
@@ -183,7 +271,7 @@ body:fullscreen {
 body:fullscreen #slideCounter,
 body:fullscreen #connectionStatus,
 body:fullscreen #navigationHints {
-    opacity: 0.7;
+    opacity: 0.5;
 }
 
 body:fullscreen #slideCounter:hover,
@@ -193,22 +281,21 @@ body:fullscreen #navigationHints:hover {
 }
 
 #statusIndicator {
-    font-size: 12px;
-    color: #28a745;
+    font-size: 10px;
+    color: var(--accent);
 }
 
 #statusIndicator.disconnected {
-    color: #dc3545;
+    color: #e55;
 }
 
-/* Client count styling */
 .client-count {
-    margin-left: 8px;
+    margin-left: 4px;
     font-size: 12px;
-    opacity: 0.8;
+    color: var(--text-dim);
 }
 
-/* Laser pointer trail (below ink while annotating) */
+/* Laser trail canvas */
 .laser-trail-canvas {
     position: absolute;
     top: 0;
@@ -222,7 +309,7 @@ body:fullscreen #navigationHints:hover {
     background: transparent;
 }
 
-/* Drawing Canvas */
+/* Drawing canvas */
 .drawing-canvas {
     position: absolute;
     top: 0;
@@ -239,14 +326,14 @@ body:fullscreen #navigationHints:hover {
 }
 
 .drawing-canvas.eraser-mode {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="red" stroke-width="2"/></svg>') 10 10, auto;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="white" stroke-width="1.5"/></svg>') 10 10, auto;
 }
 
 #slideDisplay .drawing-canvas.drawing-mode {
     z-index: 110;
 }
 
-/* Mobile Drawing Canvas */
+/* Mobile drawing canvas */
 .mobile-drawing-canvas {
     position: absolute;
     top: 0;
@@ -263,132 +350,145 @@ body:fullscreen #navigationHints:hover {
 }
 
 .mobile-drawing-canvas.eraser-mode {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="red" stroke-width="2"/></svg>') 10 10, auto;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="white" stroke-width="1.5"/></svg>') 10 10, auto;
 }
 
-/* Alpine.js transition classes */
 [x-cloak] { display: none !important; }
 
-.drawing-toolbar {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    background: rgba(0, 0, 0, 0.9);
-    padding: 12px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 1001;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-    pointer-events: none;
+/* Restore cursor inside toolbar and observer badge (body sets cursor:none globally) */
+.drawing-toolbar,
+.drawing-toolbar *,
+#observerBadge,
+#observerBadge * {
+    cursor: default;
 }
 
-.drawing-toolbar.visible,
+.drawing-toolbar button,
+.drawing-toolbar input,
+.drawing-toolbar .color-preset {
+    cursor: pointer;
+}
+
+.drawing-toolbar input[type="range"] {
+    cursor: ew-resize;
+}
+
+/* Drawing toolbar */
+.drawing-toolbar {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 1001;
+}
+
 .drawing-toolbar.drawing-active {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px;
 }
 
 .toolbar-btn {
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
+    transition: border-color 0.15s, color 0.15s;
 }
 
 .toolbar-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
-}
-
-.toolbar-btn:active {
-    transform: scale(0.95);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .toolbar-btn.active {
-    background: rgba(74, 144, 226, 0.8);
-    box-shadow: 0 0 10px rgba(74, 144, 226, 0.4);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Toggle button has no box in collapsed state */
+.drawing-toolbar:not(.drawing-active) .toggle-btn {
+    border-color: transparent;
+    color: var(--text-dim);
+}
+
+.drawing-toolbar:not(.drawing-active) .toggle-btn:hover {
+    color: var(--accent);
 }
 
 .toolbar-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 
 .toggle-btn.active {
-    background: rgba(34, 197, 94, 0.8);
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .clear-btn:hover {
-    background: rgba(239, 68, 68, 0.8);
+    border-color: #e55;
+    color: #e55;
 }
 
 .toolbar-separator {
     width: 1px;
-    height: 30px;
-    background: rgba(255, 255, 255, 0.2);
-    margin: 0 4px;
+    height: 24px;
+    background: var(--border);
+    margin: 0 2px;
 }
 
-/* Color Picker */
+/* Color picker */
 .color-picker-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    position: relative;
 }
 
 .color-picker {
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
     cursor: pointer;
     background: none;
     padding: 0;
 }
 
 .color-picker::-webkit-color-swatch-wrapper {
-    padding: 0;
-    border-radius: 8px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 2px;
+    border-radius: 0;
 }
 
 .color-picker::-webkit-color-swatch {
     border: none;
-    border-radius: 6px;
 }
 
 .color-presets {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 8px;
+    gap: 3px;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
     position: absolute;
     top: 100%;
     left: 0;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.2s ease;
+    transform: translateY(-6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
     z-index: 1002;
+    margin-top: 4px;
 }
 
 .color-picker-container:hover .color-presets {
@@ -398,94 +498,89 @@ body:fullscreen #navigationHints:hover {
 }
 
 .color-preset {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--border);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: border-color 0.15s;
 }
 
 .color-preset:hover {
-    transform: scale(1.2);
-    border-color: rgba(255, 255, 255, 0.8);
+    border-color: var(--text);
 }
 
-/* Brush Size */
+/* Brush size */
 .brush-size-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 8px;
+    gap: 6px;
+    padding: 0 6px;
 }
 
 .brush-size-label {
-    color: white;
-    font-size: 12px;
+    color: var(--text-dim);
+    font-size: 11px;
     white-space: nowrap;
 }
 
 .brush-size-slider {
-    width: 80px;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.2);
+    width: 70px;
+    height: 2px;
+    background: var(--border);
     outline: none;
     -webkit-appearance: none;
 }
 
 .brush-size-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #4a90e2;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
     cursor: pointer;
-    border: 2px solid white;
+    border: none;
 }
 
 .brush-size-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #4a90e2;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
     cursor: pointer;
-    border: 2px solid white;
+    border: none;
 }
 
 .brush-size-value {
-    color: white;
-    font-size: 12px;
-    min-width: 20px;
+    color: var(--text-dim);
+    font-size: 11px;
+    min-width: 18px;
     text-align: center;
 }
 
-/* Drawing Mode Indicators */
+/* Drawing mode indicator */
 .drawing-mode-indicator {
     position: fixed;
     bottom: 80px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(34, 197, 94, 0.9);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 6px 14px;
+    font-size: 12px;
     z-index: 1000;
     opacity: 0;
     transition: opacity 0.3s ease;
+    letter-spacing: 0.05em;
 }
 
 .drawing-mode-indicator.visible {
     opacity: 1;
 }
 
-/* Mobile Controller Interface */
+/* Mobile controller */
 .mobile-only {
     display: none !important;
 }
 
-/* Show mobile controller only on mobile devices (layout lives on #mobileController) */
 body.mobile-device .mobile-only {
     display: block !important;
 }
@@ -494,7 +589,6 @@ body.mobile-device #mobileController.mobile-only {
     display: grid !important;
 }
 
-/* Hide desktop elements on mobile devices */
 body.mobile-device #slideCounter,
 body.mobile-device #connectionStatus,
 body.mobile-device #navigationHints,
@@ -502,30 +596,24 @@ body.mobile-device #drawingToolbar {
     display: none !important;
 }
 
-/* Hide slide display on mobile (show only controller) */
 body.mobile-device #slideDisplay {
     display: none !important;
 }
 
-/*
- * Must override body.mobile-device .mobile-only { display: block !important },
- * or the slide column never gets height and nothing centers vertically.
- */
 #mobileController {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: #0a0a0f;
-    color: white;
+    background: var(--bg);
+    color: var(--text);
     z-index: 2000;
     box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     padding: 8px 10px 10px;
-    /* Fills the viewport; middle row takes all leftover space */
     height: 100dvh;
     max-height: 100dvh;
     min-height: 0;
@@ -541,14 +629,14 @@ body.mobile-device #slideDisplay {
     flex-shrink: 0;
     margin-bottom: 6px;
     padding: 4px 2px 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid var(--border);
     gap: 8px;
 }
 
 .presentation-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -557,8 +645,7 @@ body.mobile-device #slideDisplay {
 
 .slide-info {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 500;
+    color: var(--text-dim);
     flex-shrink: 0;
 }
 
@@ -572,18 +659,16 @@ body.mobile-device #slideDisplay {
     align-items: center;
     justify-content: center;
     margin: 0;
-    background: #111;
-    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
     padding: 6px;
     touch-action: manipulation;
-    transition: box-shadow 0.2s ease;
 }
 
 .mobile-slide-preview.mobile-drawing-active {
-    box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.45);
+    border-color: var(--accent);
 }
 
-/* Fills the preview cell; flex-centers the bitmap (letterboxing is even) */
 .mobile-slide-media {
     position: relative;
     width: 100%;
@@ -594,7 +679,6 @@ body.mobile-device #slideDisplay {
     justify-content: center;
 }
 
-/* Ink above laser inside the slide area */
 .mobile-slide-media .laser-trail-canvas {
     z-index: 1;
 }
@@ -607,7 +691,6 @@ body.mobile-device #slideDisplay {
     z-index: 3;
 }
 
-/* No horizontal/vertical page gestures while capturing pointer or drawing */
 .mobile-slide-preview.interaction-lock {
     touch-action: none;
     user-select: none;
@@ -625,8 +708,6 @@ body.mobile-device #slideDisplay {
 }
 
 .slide-image-stack--mobile .slide-layer {
-    border-radius: 6px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
     display: block;
     max-width: 100%;
     max-height: 100%;
@@ -653,13 +734,12 @@ body.mobile-device #slideDisplay {
     z-index: 0;
 }
 
-/* Pen · Eraser · Pointer · Clear — compact strip under the slide */
+/* Tool strip */
 .mobile-tool-strip {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 10px 12px;
+    gap: 10px;
     flex-shrink: 0;
     padding: 10px 8px 6px;
 }
@@ -667,21 +747,20 @@ body.mobile-device #slideDisplay {
 .mobile-tool-chip {
     width: 44px;
     height: 44px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.1s ease;
+    transition: border-color 0.15s, color 0.15s;
     -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-tool-chip:active {
-    transform: scale(0.94);
-    background: rgba(255, 255, 255, 0.16);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .mobile-tool-chip svg {
@@ -690,35 +769,30 @@ body.mobile-device #slideDisplay {
 }
 
 .mobile-tool-chip.active {
-    background: rgba(34, 197, 94, 0.35);
-    color: #bbf7d0;
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.45);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .mobile-tool-chip-pointer.active {
-    background: rgba(220, 38, 38, 0.35);
-    color: #fecaca;
-    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.45);
-}
-
-.mobile-tool-chip-clear {
-    color: rgba(255, 255, 255, 0.75);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .mobile-tool-chip-clear:active {
-    background: rgba(239, 68, 68, 0.35);
-    color: #fecaca;
+    border-color: #e55;
+    color: #e55;
 }
 
+/* Mobile status bar */
 .mobile-status {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 6px 4px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--border);
     font-size: 11px;
     flex-shrink: 0;
-    opacity: 0.85;
+    color: var(--text-dim);
 }
 
 .connection-indicator {
@@ -728,46 +802,45 @@ body.mobile-device #slideDisplay {
 }
 
 #mobileStatusIndicator {
-    font-size: 12px;
-    color: #28a745;
+    font-size: 10px;
+    color: var(--accent);
 }
 
 #mobileStatusIndicator.disconnected {
-    color: #dc3545;
+    color: #e55;
 }
 
 .client-info {
-    color: rgba(255, 255, 255, 0.65);
+    color: var(--text-dim);
 }
 
-
-/* Swipe feedback animation */
+/* Swipe feedback */
 .swipe-feedback {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 48px;
-    color: rgba(255, 255, 255, 0.8);
+    font-size: 36px;
+    color: rgba(255, 255, 255, 0.5);
     pointer-events: none;
     animation: swipeFeedback 0.3s ease-out;
 }
 
 .swipe-feedback.left {
-    left: 20px;
+    left: 16px;
 }
 
 .swipe-feedback.right {
-    right: 20px;
+    right: 16px;
 }
 
 @keyframes swipeFeedback {
     0% {
         opacity: 0;
-        transform: translateY(-50%) scale(0.5);
+        transform: translateY(-50%) scale(0.6);
     }
     50% {
         opacity: 1;
-        transform: translateY(-50%) scale(1.2);
+        transform: translateY(-50%) scale(1);
     }
     100% {
         opacity: 0;
@@ -775,42 +848,36 @@ body.mobile-device #slideDisplay {
     }
 }
 
-/* Mobile styles */
 @media (max-width: 768px) {
-    /* Hide desktop elements on mobile */
     body.mobile-device #slideCounter,
     body.mobile-device #connectionStatus,
     body.mobile-device #navigationHints {
         display: none;
     }
-    
-    /* Show mobile controller on mobile devices */
+
     body.mobile-device .mobile-only {
         display: block;
     }
-    
-    /* Hide slide display on mobile (show only controller) */
+
     body.mobile-device #slideDisplay {
         display: none;
     }
-    
-    /* Fallback for non-mobile devices with small screens */
+
     #slideCounter {
         bottom: 10px;
         right: 10px;
         font-size: 12px;
-        padding: 8px 12px;
+        padding: 6px 10px;
     }
-    
+
     #connectionStatus {
         top: 10px;
         right: 10px;
         font-size: 12px;
-        padding: 8px 12px;
+        padding: 6px 10px;
     }
 }
 
-/* Landscape: keep preview as tall as possible */
 @media (max-width: 768px) and (orientation: landscape) {
     #mobileController {
         padding: 6px 8px 8px;

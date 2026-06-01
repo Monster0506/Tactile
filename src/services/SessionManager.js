@@ -62,7 +62,7 @@ class SessionManager {
    * @param {string} deviceType - Device type ('desktop' or 'mobile')
    * @returns {boolean} True if successfully joined
    */
-  joinSession(sessionId, socketId, deviceType = 'desktop') {
+  joinSession(sessionId, socketId, deviceType = 'desktop', isObserver = false) {
     const session = this.getSession(sessionId);
     if (!session) {
       return false;
@@ -72,7 +72,7 @@ class SessionManager {
     this.leaveSession(socketId);
 
     // Add client to new session
-    session.addClient(socketId, deviceType);
+    session.addClient(socketId, deviceType, isObserver);
     this.clientSessions.set(socketId, sessionId);
 
     // Join socket room for this session
@@ -138,6 +138,20 @@ class SessionManager {
 
     this.clientSessions.delete(socketId);
     return true;
+  }
+
+  /**
+   * Check whether a connected socket joined as an observer.
+   * @param {string} socketId
+   * @returns {boolean}
+   */
+  isClientObserver(socketId) {
+    const sessionId = this.clientSessions.get(socketId);
+    if (!sessionId) return false;
+    const session = this.getSession(sessionId);
+    if (!session) return false;
+    const client = session.getClient(socketId);
+    return client ? Boolean(client.isObserver) : false;
   }
 
   /**

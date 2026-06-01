@@ -12,7 +12,7 @@ const {
 } = require('./htmlZipSlides');
 const { resolveHacksuLayout } = require('./hacksuDeckCapture');
 
-/** Scale factor passed to PDF.js viewport — higher = sharper, larger images */
+/** Scale factor passed to PDF.js viewport - higher = sharper, larger images */
 const PDF_RASTER_SCALE = 3;
 
 /** Logical 16:9 slide (CSS px) for markdown HTML + Puppeteer layout */
@@ -20,8 +20,8 @@ const SLIDE_VIEWPORT_WIDTH = 1920;
 const SLIDE_VIEWPORT_HEIGHT = 1080;
 
 /**
- * Puppeteer screenshots at this device scale → physical pixels = logical × factor
- * (e.g. 1920×1080 @4 = 7680×4320 PNG). Higher = sharper bitmap; does not change CSS font sizes.
+ * Puppeteer screenshots at this device scale -> physical pixels = logical x factor
+ * (e.g. 1920x1080 @4 = 7680x4320 PNG). Higher = sharper bitmap; does not change CSS font sizes.
  */
 const SLIDE_SCREENSHOT_DEVICE_SCALE = 4;
 
@@ -166,7 +166,7 @@ class FileProcessor {
 
   /**
    * Convert PDF to slide images using PDF.js (pure JS) + Puppeteer (bundled Chromium).
-   * No system binaries required — fully cross-platform.
+   * No system binaries required - fully cross-platform.
    * @param {string} pdfPath - Path to PDF file
    * @param {string} outputDir - Output directory for slides
    * @returns {Promise<Array>} Array of slide objects
@@ -329,7 +329,7 @@ class FileProcessor {
 
   /**
    * HacKSU presentation format (.zip): Jinja deck (presentation/app.py + templates/ + examples/) rendered
-   * with Nunjucks, or plain HTML with &lt;div class="slide"&gt;…&lt;/div&gt;. CSS is inlined; assets use &lt;base href&gt; during capture.
+   * with Nunjucks, or plain HTML with &lt;div class="slide"&gt;...&lt;/div&gt;. CSS is inlined; assets use &lt;base href&gt; during capture.
    * @param {string} zipPath
    * @param {string} outputDir
    * @returns {Promise<Array>}

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Presentation Viewer</title>
+    <title>Tactile</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/style.css">
     <script type="module" src="/js/upload/bootstrap.js"></script>
@@ -13,24 +13,46 @@
 
 <body>
     <div class="container" x-data="uploadApp()">
-        <h1>Web Presentation Viewer</h1>
-        <div class="upload-section">
-            <h2>Upload Your Presentation</h2>
+        <h1>Tactile</h1>
+
+        <div class="upload-section" x-show="!result">
+            <h2>Upload Presentation</h2>
             <form @submit.prevent="uploadFile" enctype="multipart/form-data">
                 <div class="file-input-wrapper">
                     <input type="file" x-ref="fileInput" name="presentation" accept=".pdf,.zip,.md" required
                         @change="updateFileName">
-                    <label for="fileInput" x-text="fileName">Choose File</label>
+                    <label for="fileInput" x-text="fileName">Choose file</label>
                 </div>
                 <button type="submit" :disabled="uploading">
-                    <span x-show="!uploading">Upload Presentation</span>
-                    <span x-show="uploading">Uploading...</span>
+                    <span x-show="!uploading">Upload</span>
+                    <span x-show="uploading">Processing...</span>
                 </button>
             </form>
             <div x-show="status.message" x-text="status.message" :class="status.type" class="upload-status"></div>
         </div>
-        <div class="supported-formats">
-            <h3>Supported Formats:</h3>
+
+        <div class="upload-result" x-show="result">
+            <div class="url-block">
+                <div class="url-label presenter">Presenter link (keep private)</div>
+                <div class="url-row">
+                    <div class="url-value" x-text="result && result.presenterUrl"></div>
+                    <button class="copy-btn" type="button" @click="copy(result.presenterUrl)">Copy</button>
+                </div>
+            </div>
+
+            <div class="url-block">
+                <div class="url-label">Audience link</div>
+                <div class="url-row">
+                    <div class="url-value" x-text="result && result.url"></div>
+                    <button class="copy-btn" type="button" @click="copy(result.url)">Copy</button>
+                </div>
+            </div>
+
+            <button class="open-btn" type="button" @click="open(result.presenterUrl)">Open as presenter</button>
+        </div>
+
+        <div class="supported-formats" x-show="!result">
+            <h3>Supported formats</h3>
             <ul>
                 <li>PDF (.pdf)</li>
                 <li>HacKSU slides (.zip)</li>

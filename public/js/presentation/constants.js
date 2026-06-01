@@ -15,7 +15,7 @@ export const LASER_EMIT_INTERVAL_MS = 22;
 /** Per-frame trail fade (higher = faster disappearance) */
 export const LASER_FADE_STEP = 0.055;
 
-/** Interpolation toward remote samples each frame (0–1); higher = snappier */
+/** Interpolation toward remote samples each frame (0-1); higher = snappier */
 export const LASER_REMOTE_SMOOTHING = 0.32;
 
 /** Skip drawing segments shorter than this (normalized coords) */
@@ -24,6 +24,6 @@ export const LASER_MIN_SEGMENT_NORM = 0.00012;
 /** Idle frames before stopping the animation loop (trail has faded via destination-out) */
 export const LASER_IDLE_FRAMES_STOP = 140;
 
-/** 1×1 transparent GIF — placeholder `src` for the inactive slide layer before it has a real URL */
+/** 1x1 transparent GIF - placeholder `src` for the inactive slide layer before it has a real URL */
 export const EMPTY_IMG_DATA_URL =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';

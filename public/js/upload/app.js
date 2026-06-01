@@ -1,7 +1,8 @@
 export function uploadApp() {
   return {
-    fileName: 'Choose File',
+    fileName: 'Choose file',
     uploading: false,
+    result: null,
     status: {
       message: '',
       type: ''
@@ -9,13 +10,13 @@ export function uploadApp() {
 
     updateFileName() {
       const file = this.$refs.fileInput.files[0];
-      this.fileName = file ? file.name : 'Choose File';
+      this.fileName = file ? file.name : 'Choose file';
     },
 
     async uploadFile() {
       const file = this.$refs.fileInput.files[0];
       if (!file) {
-        this.showStatus('Please select a file to upload.', 'error');
+        this.showStatus('Please select a file.', 'error');
         return;
       }
 
@@ -24,30 +25,29 @@ export function uploadApp() {
 
       try {
         this.uploading = true;
-        this.showStatus('Uploading and processing file...', 'info');
+        this.showStatus('Processing...', 'info');
 
         const response = await fetch('/upload', {
           method: 'POST',
           body: formData,
           headers: {
-            // ngrok free tier returns HTML interstitial for API calls unless this is set
             'ngrok-skip-browser-warning': '69420',
             Accept: 'application/json'
           }
         });
 
         const raw = await response.text();
-        let result = null;
+        let data = null;
         try {
-          result = raw ? JSON.parse(raw) : {};
+          data = raw ? JSON.parse(raw) : {};
         } catch {
           const isNgrokFail =
             response.status === 503 &&
             /ngrok|ERR_NGROK|incomplete HTTP response/i.test(raw);
           const hint = isNgrokFail
-            ? 'Ngrok could not get a valid HTTP response from your app (often ERR_NGROK_3004). Point the tunnel at the same protocol as the server: for a typical Node app use ngrok http http://127.0.0.1:PORT; if you serve HTTPS locally use ngrok http https://127.0.0.1:PORT. Confirm the server is running and the port matches.'
+            ? 'Ngrok could not get a valid HTTP response (ERR_NGROK_3004). Use: ngrok http http://127.0.0.1:PORT'
             : raw.trimStart().startsWith('<')
-              ? 'Upload returned a web page instead of data (ngrok warning, timeout, or proxy). Try again; use localhost if it persists.'
+              ? 'Upload returned a web page instead of data. Try again or use localhost.'
               : `Invalid response (HTTP ${response.status}).`;
           this.showStatus(hint, 'error');
           console.error('Upload non-JSON response:', response.status, raw.slice(0, 500));
@@ -55,12 +55,14 @@ export function uploadApp() {
         }
 
         if (response.ok) {
-          this.showStatus('Upload successful! Redirecting to presentation...', 'success');
-          setTimeout(() => {
-            window.location.href = result.url;
-          }, 2000);
+          this.status = { message: '', type: '' };
+          const base = window.location.origin;
+          this.result = {
+            url: base + data.url,
+            presenterUrl: base + data.presenterUrl
+          };
         } else {
-          this.showStatus(result.error || 'Upload failed', 'error');
+          this.showStatus(data.error || 'Upload failed.', 'error');
         }
       } catch (error) {
         this.showStatus('Network error. Please try again.', 'error');
@@ -70,14 +72,16 @@ export function uploadApp() {
       }
     },
 
+    copy(url) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    },
+
+    open(url) {
+      window.location.href = url;
+    },
+
     showStatus(message, type) {
       this.status = { message, type };
-
-      if (type === 'success') {
-        setTimeout(() => {
-          this.status = { message: '', type: '' };
-        }, 3000);
-      }
     }
   };
 }

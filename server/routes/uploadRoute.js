@@ -40,6 +40,8 @@ function registerUploadRoute(app, { fileProcessor, storageService, upload }) {
         totalSlides: savedPresentation.getTotalSlides(),
         slides: savedPresentation.slides,
         url: `/presentation/${savedPresentation.id}`,
+        presenterUrl: `/presentation/${savedPresentation.id}?token=${savedPresentation.presenterToken}`,
+        presenterToken: savedPresentation.presenterToken,
         createdAt: savedPresentation.createdAt
       });
     } catch (error) {

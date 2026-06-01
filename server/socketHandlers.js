@@ -1,3 +1,12 @@
+const crypto = require('crypto');
+
+function verifyPresenterToken(expected, provided) {
+  const a = Buffer.from(expected);
+  const b = Buffer.from(provided || '');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 function createRequireSession(sessionManager) {
   return function requireSession(socket) {
     const sessionId = sessionManager.clientSessions.get(socket.id);
@@ -9,6 +18,16 @@ function createRequireSession(sessionManager) {
   };
 }
 
+function createRequirePresenter(sessionManager) {
+  return function requirePresenter(socket) {
+    if (sessionManager.isClientObserver(socket.id)) {
+      socket.emit('error', { message: 'Observers cannot perform this action' });
+      return false;
+    }
+    return true;
+  };
+}
+
 /**
  * @param {import('socket.io').Server} io
  * @param {{ sessionManager: object, storageService: object }} deps
@@ -16,13 +35,14 @@ function createRequireSession(sessionManager) {
 function attachSocketHandlers(io, deps) {
   const { sessionManager, storageService } = deps;
   const requireSession = createRequireSession(sessionManager);
+  const requirePresenter = createRequirePresenter(sessionManager);
 
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
     socket.on('join-presentation', async (data) => {
       try {
-        const { presentationId, deviceType = 'desktop' } = data;
+        const { presentationId, deviceType = 'desktop', presenterToken = '' } = data;
 
         const presentation = await storageService.getPresentation(presentationId);
         if (!presentation) {
@@ -35,11 +55,14 @@ function attachSocketHandlers(io, deps) {
           session = sessionManager.createSession(presentationId);
         }
 
-        const joined = sessionManager.joinSession(session.sessionId, socket.id, deviceType);
+        const isPresenter = verifyPresenterToken(presentation.presenterToken, presenterToken);
+        const isObserver = !isPresenter;
+        const joined = sessionManager.joinSession(session.sessionId, socket.id, deviceType, isObserver);
         if (joined) {
           const sessionState = sessionManager.getSessionState(session.sessionId);
           socket.emit('session-joined', {
             ...sessionState,
+            isPresenter,
             presentation: {
               id: presentation.id,
               title: presentation.title,
@@ -60,6 +83,7 @@ function attachSocketHandlers(io, deps) {
     socket.on('slide-change', (data) => {
       try {
         const { slideIndex } = data;
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) {
           console.error(`No session found for socket ${socket.id}`);
@@ -78,6 +102,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('slide-next', () => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -94,6 +119,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('slide-previous', () => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -111,6 +137,7 @@ function attachSocketHandlers(io, deps) {
     socket.on('laser-pointer', (data) => {
       try {
         const { x, y, active } = data;
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -127,6 +154,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('laser-trail-point', (data) => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
         const x = data?.x;
@@ -142,6 +170,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('drawing-data', (data) => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -154,6 +183,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('drawing-start', (data) => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -166,6 +196,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('drawing-move', (data) => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -178,6 +209,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('drawing-end', (data) => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -190,6 +222,7 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('drawing-clear', (data) => {
       try {
+        if (!requirePresenter(socket)) return;
         const sessionId = requireSession(socket);
         if (!sessionId) return;
 
@@ -215,4 +248,4 @@ function attachSocketHandlers(io, deps) {
   });
 }
 
-module.exports = { attachSocketHandlers, createRequireSession };
+module.exports = { attachSocketHandlers, createRequireSession, createRequirePresenter, verifyPresenterToken };

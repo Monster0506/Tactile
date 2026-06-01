@@ -4,14 +4,14 @@ export const drawing = {
       const canvas = this.$refs.drawingCanvas;
       this.drawing.ctx = canvas.getContext('2d');
       this.setupDrawingCanvas();
-      this.setupDrawingEvents();
+      if (!this.isObserver) this.setupDrawingEvents();
     }
 
     if (this.$refs.mobileDrawingCanvas) {
       const mobileCanvas = this.$refs.mobileDrawingCanvas;
       this.drawing.mobileCtx = mobileCanvas.getContext('2d');
       this.setupMobileDrawingCanvas();
-      this.setupMobileDrawingEvents();
+      if (!this.isObserver) this.setupMobileDrawingEvents();
     }
   },
 
@@ -175,7 +175,7 @@ export const drawing = {
     }
   },
 
-  /** Mobile: green pen — toggles pen draw mode */
+  /** Mobile: green pen - toggles pen draw mode */
   selectMobilePen() {
     if (!this.isMobile) return;
     if (this.drawing.isDrawingMode && this.drawing.currentTool === 'pen') {
@@ -203,7 +203,7 @@ export const drawing = {
     });
   },
 
-  /** Mobile: eraser — toggles eraser mode */
+  /** Mobile: eraser - toggles eraser mode */
   selectMobileEraser() {
     if (!this.isMobile) return;
     if (this.drawing.isDrawingMode && this.drawing.currentTool === 'eraser') {
