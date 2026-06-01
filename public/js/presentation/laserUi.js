@@ -395,7 +395,6 @@ export const laserUi = {
   toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
-        console.log('Error attempting to enable fullscreen:', err);
       });
     } else {
       document.exitFullscreen();

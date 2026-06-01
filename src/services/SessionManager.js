@@ -32,7 +32,6 @@ class SessionManager {
     this.sessions.set(session.sessionId, session);
     this.presentationSessions.set(presentationId, session.sessionId);
     
-    console.log(`Created session ${session.sessionId} for presentation ${presentationId}`);
     return session;
   }
 
@@ -81,7 +80,6 @@ class SessionManager {
       socket.join(sessionId);
     }
 
-    console.log(`Client ${socketId} (${deviceType}) joined session ${sessionId}`);
     
     // Broadcast client count update to all clients in session
     this.broadcastToSession(sessionId, 'client-connected', {
@@ -109,7 +107,6 @@ class SessionManager {
       const removed = session.removeClient(socketId);
       
       if (removed) {
-        console.log(`Client ${socketId} left session ${sessionId}`);
         
         // Leave socket room
         const socket = this.io.sockets.sockets.get(socketId);
@@ -170,7 +167,6 @@ class SessionManager {
 
     const updated = session.updateCurrentSlide(slideIndex);
     if (updated) {
-      console.log(`Session ${sessionId}: Slide updated to ${slideIndex} by ${initiatorSocketId}`);
       
       // Broadcast to all clients in session
       this.broadcastToSession(sessionId, 'slide-updated', {
@@ -357,7 +353,6 @@ class SessionManager {
       // Remove session
       this.sessions.delete(sessionId);
       
-      console.log(`Cleaned up session ${sessionId}`);
     }
   }
 
@@ -377,9 +372,6 @@ class SessionManager {
       this.cleanupSession(sessionId);
     });
     
-    if (sessionsToCleanup.length > 0) {
-      console.log(`Cleaned up ${sessionsToCleanup.length} inactive sessions`);
-    }
   }
 
   /**
@@ -436,7 +428,6 @@ class SessionManager {
     const sessionIds = Array.from(this.sessions.keys());
     sessionIds.forEach(sessionId => this.cleanupSession(sessionId));
     
-    console.log('SessionManager destroyed');
   }
 }
 

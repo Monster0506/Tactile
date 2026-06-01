@@ -100,27 +100,15 @@ export const navigation = {
   },
 
   joinPresentation() {
-    console.log('=== JOIN PRESENTATION ATTEMPT ===');
-    console.log('Presentation ID:', this.presentationId);
-    console.log('Socket connected:', this.socket?.connected);
-    console.log('Presentation data loaded:', !!this.presentationData);
-
     if (this.presentationId) {
       const deviceType = this.isMobile ? 'mobile' : 'desktop';
       const presenterToken = new URLSearchParams(window.location.search).get('token') || '';
-      const joinData = {
+      this.socket.emit('join-presentation', {
         presentationId: this.presentationId,
         deviceType,
         presenterToken
-      };
-
-      console.log('Emitting join-presentation with data:', joinData);
-      this.socket.emit('join-presentation', joinData);
-      console.log('Join-presentation event emitted');
-    } else {
-      console.error('[ERROR] Cannot join presentation - no presentation ID');
+      });
     }
-    console.log('=== END JOIN PRESENTATION ATTEMPT ===');
   },
 
   displaySlide(slideIndex) {

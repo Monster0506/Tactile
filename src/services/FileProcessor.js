@@ -229,7 +229,6 @@ class FileProcessor {
           order: pageNum
         });
 
-        console.log(`Rendered PDF page ${pageNum}/${numPages}`);
       }
 
       await page.close();
@@ -288,7 +287,6 @@ class FileProcessor {
           order: slideNumber
         });
 
-        console.log(`Generated slide ${slideNumber}/${fullHtmlDocuments.length}`);
       }
     } finally {
       await browser.close();
@@ -319,13 +317,11 @@ class FileProcessor {
           hacksuLayout.presentationDir
         );
         const slides = await this.renderHtmlPagesToSlides(documents, outputDir);
-        console.log(`Successfully converted ${slides.length} HacKSU slides (Jinja templates)`);
         return slides;
       }
 
       const documents = await buildSlideHtmlDocumentsFromExtractedRoot(extractDir);
       const slides = await this.renderHtmlPagesToSlides(documents, outputDir);
-      console.log(`Successfully converted ${slides.length} HacKSU slides (static HTML)`);
       return slides;
     } catch (error) {
       throw new Error(`HacKSU slides conversion failed: ${error.message}`);
@@ -368,10 +364,8 @@ class FileProcessor {
       });
 
       const slides = await this.renderHtmlPagesToSlides(fullHtmls, outputDir);
-      console.log(`Successfully converted ${pages.length} markdown slides`);
       return slides;
     } catch (error) {
-      console.error('Error converting markdown:', error);
       throw new Error(`Failed to convert markdown: ${error.message}`);
     }
   }

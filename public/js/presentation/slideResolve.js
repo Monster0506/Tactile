@@ -7,45 +7,28 @@ export function resolveSlideUrl(app, slideIndex) {
   const idx = typeof slideIndex === 'number' && slideIndex >= 0 ? slideIndex : 0;
 
   if (!app.slides || !Array.isArray(app.slides) || app.slides.length === 0) {
-    console.log('No slides available, slides:', app.slides);
     return '';
   }
 
   if (idx >= app.slides.length) {
-    console.log('Slide index out of bounds:', idx, 'Total slides:', app.slides.length);
     return '';
   }
 
   const slide = app.slides[idx];
   if (!slide) {
-    console.log('No slide data for index:', idx, 'Total slides:', app.slides.length);
     return '';
   }
 
-  console.log('Current slide data:', slide);
+  if (slide.imageUrl) return slide.imageUrl;
+  if (slide.image_url) return slide.image_url;
+  if (slide.url) return slide.url;
+  if (slide.path) return slide.path;
+  if (slide.image) return slide.image;
+  if (slide.src) return slide.src;
+  if (slide.filename) return `/slides/${slide.filename}`;
+  if (typeof slide === 'string') return slide.startsWith('/') ? slide : `/slides/${slide}`;
 
-  let imageUrl = '';
-
-  if (slide.imageUrl) {
-    imageUrl = slide.imageUrl;
-  } else if (slide.image_url) {
-    imageUrl = slide.image_url;
-  } else if (slide.url) {
-    imageUrl = slide.url;
-  } else if (slide.path) {
-    imageUrl = slide.path;
-  } else if (slide.image) {
-    imageUrl = slide.image;
-  } else if (slide.src) {
-    imageUrl = slide.src;
-  } else if (slide.filename) {
-    imageUrl = `/slides/${slide.filename}`;
-  } else if (typeof slide === 'string') {
-    imageUrl = slide.startsWith('/') ? slide : `/slides/${slide}`;
-  }
-
-  console.log('Resolved image URL:', imageUrl);
-  return imageUrl;
+  return '';
 }
 
 /**

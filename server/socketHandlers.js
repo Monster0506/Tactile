@@ -38,8 +38,6 @@ function attachSocketHandlers(io, deps) {
   const requirePresenter = createRequirePresenter(sessionManager);
 
   io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
-
     socket.on('join-presentation', async (data) => {
       try {
         const { presentationId, deviceType = 'desktop', presenterToken = '' } = data;
@@ -70,7 +68,6 @@ function attachSocketHandlers(io, deps) {
             }
           });
 
-          console.log(`Client ${socket.id} (${deviceType}) joined presentation ${presentationId}, session ${session.sessionId}`);
         } else {
           socket.emit('error', { message: 'Failed to join session' });
         }
@@ -235,7 +232,6 @@ function attachSocketHandlers(io, deps) {
 
     socket.on('disconnect', () => {
       try {
-        console.log('Client disconnected:', socket.id);
         sessionManager.leaveSession(socket.id);
       } catch (error) {
         console.error('Error handling disconnect:', error);

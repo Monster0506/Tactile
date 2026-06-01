@@ -215,7 +215,7 @@ async function collectStyles($, extractRoot, entryDir, siteRootDir = extractRoot
       const text = await fs.readFile(abs, 'utf8');
       chunks.push(text);
     } catch (err) {
-      console.warn('HacKSU presentation zip: skipped stylesheet', href, err.message);
+      /* skipped unresolvable stylesheet */
     }
   }
 
