@@ -57,7 +57,4 @@ async function renderHacksuIndexHtml(presentationDir) {
   return env.render('index.html', ctx);
 }
 
-module.exports = {
-  renderHacksuIndexHtml,
-  loadHacksuTemplateContext
-};
+module.exports = { renderHacksuIndexHtml };

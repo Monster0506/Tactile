@@ -555,26 +555,6 @@ body:fullscreen #navigationHints:hover {
     text-align: center;
 }
 
-/* Drawing mode indicator */
-.drawing-mode-indicator {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    padding: 6px 14px;
-    font-size: 12px;
-    z-index: 1000;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    letter-spacing: 0.05em;
-}
-
-.drawing-mode-indicator.visible {
-    opacity: 1;
-}
 
 /* Mobile controller */
 .mobile-only {

@@ -350,16 +350,8 @@ ${fragment}
   return documents;
 }
 
-async function buildSlideHtmlDocumentsFromZipBuffer(zipBuffer, extractRootFsPath) {
-  await extractZipToDirectory(zipBuffer, extractRootFsPath);
-  return buildSlideHtmlDocumentsFromExtractedRoot(extractRootFsPath);
-}
-
 module.exports = {
-  buildSlideHtmlDocumentsFromZipBuffer,
   buildSlideHtmlDocumentsFromExtractedRoot,
   buildSlideHtmlDocumentsFromHacksuDeck,
   extractZipToDirectory,
-  findEntryHtmlRelativePath,
-  rewriteRootAbsolutePaths
 };
