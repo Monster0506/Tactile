@@ -5,8 +5,7 @@ services:
       - app-data:/app/data
       - app-uploads:/app/uploads
     environment:
-      - NODE_ENV=production
-      - PORT=3000
+      - PRESENTATION_TTL_DAYS=21
     restart: unless-stopped
 
 volumes:

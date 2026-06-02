@@ -4,7 +4,12 @@ const PORT = process.env.PORT || 3000;
 
 const { app, server, io, storageService, sessionManager } = createApplication();
 
-storageService.initialize().catch(console.error);
+storageService.initialize()
+  .then(() => storageService.cleanup())
+  .catch(console.error);
+
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+const cleanupInterval = setInterval(() => storageService.cleanup().catch(console.error), TWENTY_FOUR_HOURS);
 
 process.on('uncaughtException', (err) => {
   console.error('[fatal] uncaughtException - process may be unstable:', err);
@@ -37,9 +42,8 @@ process.on('SIGINT', () => {
 });
 
 function cleanup() {
-  if (laserPointerInterval) {
-    clearInterval(laserPointerInterval);
-  }
+  clearInterval(laserPointerInterval);
+  clearInterval(cleanupInterval);
 
   if (sessionManager) {
     sessionManager.destroy();

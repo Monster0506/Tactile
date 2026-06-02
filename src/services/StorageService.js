@@ -353,6 +353,63 @@ class StorageService {
   }
 
   /**
+   * Purge stale temp files and expired presentations.
+   * - uploads/temp/: anything older than 1 hour
+   * - presentations: anything older than PRESENTATION_TTL_DAYS (default 21)
+   * - uploads/slides/: orphaned directories with no matching presentation
+   */
+  async cleanup() {
+    const ttlDays = parseInt(process.env.PRESENTATION_TTL_DAYS || '21', 10);
+    const now = Date.now();
+
+    // 1. Purge stale temp files
+    const tempDir = path.join(this.uploadsDirectory, 'temp');
+    try {
+      const tempEntries = await fs.readdir(tempDir);
+      for (const entry of tempEntries) {
+        const entryPath = path.join(tempDir, entry);
+        try {
+          const stat = await fs.stat(entryPath);
+          if (now - stat.mtimeMs > 60 * 60 * 1000) {
+            await fs.rm(entryPath, { recursive: true, force: true });
+          }
+        } catch {
+          // entry disappeared between readdir and stat - ignore
+        }
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error('cleanup: error reading temp dir:', err.message);
+      }
+    }
+
+    // 2. Delete expired presentations
+    const cutoff = ttlDays * 24 * 60 * 60 * 1000;
+    const expired = Array.from(this.presentations.values()).filter((p) => {
+      const age = now - new Date(p.createdAt).getTime();
+      return age > cutoff;
+    });
+
+    for (const presentation of expired) {
+      await this.deletePresentation(presentation.id);
+    }
+
+    // 3. Remove orphaned slide directories (no matching presentation in memory)
+    try {
+      const slideDirs = await fs.readdir(this.slidesDirectory);
+      for (const dir of slideDirs) {
+        if (!this.presentations.has(dir)) {
+          await fs.rm(path.join(this.slidesDirectory, dir), { recursive: true, force: true });
+        }
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error('cleanup: error reading slides dir:', err.message);
+      }
+    }
+  }
+
+  /**
    * Get storage statistics
    * @returns {Promise<Object>} Storage statistics
    */
